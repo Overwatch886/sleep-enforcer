@@ -1,0 +1,11 @@
+name: sleep_enforcer_env
+channels:
+  - defaults
+dependencies:
+  # --- Conda Packages ---
+  - python=3.12
+  - pillow
+  
+  # --- Pip-Only Packages ---
+  - pip:
+    # - <some-package-conda-doesnt-have>
