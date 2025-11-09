@@ -281,7 +281,7 @@ class SleepEnforcerApp(tk.Tk):
     
     def __init__(self):
         super().__init__() # Initialize tk.Tk
-        # Setting Windows Icom
+        # App Windows Icon
         try:
             # We use the *same* .ico file
             icon_path = resource_path("icons\\app_icon.ico") 
