@@ -21,3 +21,6 @@ dist/
 
 # Old versions
 sleep_enforcer(tk.toplevel version).py
+
+# Installers
+installer_output/
