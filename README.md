@@ -17,7 +17,7 @@ valid reason is given.
 This project requires [Anaconda](https://www.anaconda.com/download) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 1. Clone the repository:  
-   git clone \[https://github.com/Overwatch886/sleep-enforcer.git\] (https://github.com/Overwatch886/sleep-enforcer.git)  
+   git clone [https://github.com/Overwatch886/sleep-enforcer.git](https://github.com/Overwatch886/sleep-enforcer.git)  
    cd sleep-enforcer
 
 2. Create and activate the Conda environment:  
