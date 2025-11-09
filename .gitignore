@@ -19,3 +19,6 @@ dist/
 
 #VScode
 .vscode/
+
+# Old versions
+sleep_enforcer(tk.toplevel version).py
