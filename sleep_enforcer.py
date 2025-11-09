@@ -342,7 +342,7 @@ class SleepEnforcerApp(tk.Tk):
             """Loads and stores required assets like icons."""
             settings_icon_path = resource_path("icons/settings_icon.png")
             try:
-                settings_icon_image = Image.open('icons/settings_icon.png')
+                settings_icon_image = Image.open(settings_icon_path)
                 settings_icon_image = settings_icon_image.resize((16, 16), Image.LANCZOS)
                 self.settings_icon = ImageTk.PhotoImage(settings_icon_image)
             except Exception as e:
