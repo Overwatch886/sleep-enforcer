@@ -281,7 +281,13 @@ class SleepEnforcerApp(tk.Tk):
     
     def __init__(self):
         super().__init__() # Initialize tk.Tk
-        
+        # Setting Windows Icom
+        try:
+            # We use the *same* .ico file
+            icon_path = resource_path("icons\\app_icon.ico") 
+            self.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"Warning: Could not load window icon. {e}")
         ###
         ### 1. CONFIGURE THE MAIN WINDOW
         ### Instead of self.root = tk.Tk() and self.root.withdraw(),
