@@ -6,9 +6,10 @@ dependencies:
   # --- Conda Packages ---
   - python==3.12
   - pillow
-  - pystray
-  - pyinstaller
+  - pip
   
   # --- Pip-Only Packages ---
   - pip:
+    - pystray
+    - pyinstaller
     # - <some-package-conda-doesnt-have>
