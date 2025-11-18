@@ -8,9 +8,12 @@ import subprocess
 import sys
 import tempfile
 from PIL import Image, ImageTk
-
+import pystray
+from pystray import MenuItem as item
 
 # Relative File Resolver to HElp Find OTher NON python resources
+
+# TODO study this function
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
@@ -295,7 +298,7 @@ class SleepEnforcerApp(tk.Tk):
         ###
         self.title("Sleep Enforcer")
         self.geometry("500x300")
-        self.protocol("WM_DELETE_WINDOW", self.on_closing) # Handle user closing window(this minimizes it to background)
+        self.protocol("WM_DELETE_WINDOW", self.on_minimizing_to_background) # Handle user closing window(this minimizes it to background)
 
         # --- Copy all your logic variables ---
         self.warning_time = "21:55"
@@ -311,7 +314,7 @@ class SleepEnforcerApp(tk.Tk):
 
         # --- 3. Load Assets ---
         self.load_assets()
-
+        self.setup_tray() # Creating Notification Tray 
         ###
         ### 2. CREATE THE FRAME CONTAINER
         ### This one frame will hold all our pages.
@@ -340,10 +343,12 @@ class SleepEnforcerApp(tk.Tk):
         ###
         ### 4. START THE APP
         ###
+       
         self.center_window(self, 500, 300) # Center the main window
         self.show_frame("StartupPage")  # Show the first page
-        self.check_time()  # Start your time-checking logic
-    
+        self.check_time() # Start your time-checking logic
+        
+
     def load_assets(self):
             """Loads and stores required assets like icons."""
             settings_icon_path = resource_path("icons/settings_icon.png")
@@ -398,17 +403,68 @@ class SleepEnforcerApp(tk.Tk):
             messagebox.showerror("Error",
                                  f"Could not save settings:\n{e}",
                                  parent=self)
+    def setup_tray(self):
+        # Creating the System Tray for Background Running Notification
+
+        # Creating the notification menu
+        try:
+            notification_menu =( 
+                item('Open Sleep Enforcer', self.show_window),
+                    )
+            print("[DEBUG] Notification Menu Created")
+
+            # Loading Icons
+            try:
+                icon_path = resource_path('icons\\app_icon.ico')
+                notification_icon_image = Image.open(icon_path)
+                print("[DEBUG] Icon Successfully Loaded")
+            except Exception as e:
+                print(f"[ERROR] Tray Icon error {e}")
+                image = Image.new('RGB', (64,64), color = 'red')
+                print("[DEBUG] Using fallback square red icon")
             
+            # Creating the Tray icon object and adding to notification menu
+            print("[DEBUG] Creating pystray.Icon object...")
+            self.tray_icon = pystray.Icon("SleepEnforcer", notification_icon_image, f"Sleep Enforcer \nSleep Time is by {self.shutdown_time}", notification_menu)
+            print("[DEBUG] pystray.Icon object successfully created")
 
-    def on_closing(self):
+            # Running A Separate Notification Thread to avoid affecting GUI
+            threading.Thread(target = self.tray_icon.run, daemon=True).start()
+            print("[DEBUG] Tray thread started.")
+        except Exception as e:
+            print(f"[ERROR] Tray object created failed because of {e}")
+
+        
+
+    def show_window(self, icon=None, item=None):
+        # Bringing back the GUI to Run In the Foreground
+        self.deiconify() 
+        self.lift()
+        self.attributes("-topmost", True)
+
+    def on_minimizing_to_background(self):
         """Handle the user clicking the 'X' button."""
-        if messagebox.askokcancel('''Quit", "Do you want to minimize Sleep Enforcer?"
-                                   Sleep enforcer would still run in the background to implement sleep schedule
-                                  You can access sleep enforcer window by checking the background running notification in notification centre''' ):
-            # TODO set up notification showing that sleep enforcer running in the background even when closed
-            # In the notification centre
-            self.withdraw()
+        # TODO set up notification showing that sleep enforcer running in the background even when closed
+        # In the notification centre
+        self.withdraw()
+   
+        # Displaying Notification of Background running
+        if hasattr(self, 'tray_icon'):
+            print("[DEBUG] Tray Icon Exists, Displaying Notification")
+            try:
+                self.tray_icon.notify(
+                "Sleep Enforcer is running in the background. \nCheck Notification Tray To Find Me",
+                "Nice try! I'm still here. 👀" 
+                )
+                print("[DEBUG] Background Run Notification Displayed")
+            except Exception as e:
+                    print(f"[ERROR] Notification failed: {e}")
+        else:
+            print("[ERROR] Tray Icon Not Found")
 
+        
+            
+  
     # Windows positioning and centering
     def center_window(self, window, width, height):
         screen_width = window.winfo_screenwidth()
