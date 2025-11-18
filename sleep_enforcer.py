@@ -295,7 +295,7 @@ class SleepEnforcerApp(tk.Tk):
         ###
         self.title("Sleep Enforcer")
         self.geometry("500x300")
-        self.protocol("WM_DELETE_WINDOW", self.on_closing) # Handle user closing window
+        self.protocol("WM_DELETE_WINDOW", self.on_closing) # Handle user closing window(this minimizes it to background)
 
         # --- Copy all your logic variables ---
         self.warning_time = "21:55"
@@ -402,20 +402,14 @@ class SleepEnforcerApp(tk.Tk):
 
     def on_closing(self):
         """Handle the user clicking the 'X' button."""
-        if messagebox.askokcancel("Quit", "Do you want to exit Sleep Enforcer?"):
-            # Clean up lockfile before quitting
-            try:
-                lockfile = os.path.join(tempfile.gettempdir(), 'sleep_enforcer.lock')
-                if os.path.exists(lockfile):
-                    os.remove(lockfile)
-            except Exception as e:
-                print(f"Could not remove lockfile: {e}")
-            self.destroy()
+        if messagebox.askokcancel('''Quit", "Do you want to minimize Sleep Enforcer?"
+                                   Sleep enforcer would still run in the background to implement sleep schedule
+                                  You can access sleep enforcer window by checking the background running notification in notification centre''' ):
+            # TODO set up notification showing that sleep enforcer running in the background even when closed
+            # In the notification centre
+            self.withdraw()
 
-    # --- All your LOGIC methods are moved here ---
-    # They are almost identical, but they call 'self.show_frame'
-    # instead of creating/destroying Toplevel windows.
-    
+    # Windows positioning and centering
     def center_window(self, window, width, height):
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
