@@ -565,18 +565,7 @@ class SleepEnforcerApp(tk.Tk):
         self.final_timer_active = False
         self.grace_timer_active = False
         
-        # Destroy the main window
-        self.destroy() 
-        
-        # clean up lock file
-        try:
-            lockfile = os.path.join(tempfile.gettempdir(), 'sleep_enforcer.lock')
-            if os.path.exists(lockfile):
-                os.remove(lockfile)
-        except:
-            pass
-
-        # Give windows time to close
+        # Give windows some time
         time.sleep(0.3)
         
         # Hibernate
