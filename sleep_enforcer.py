@@ -104,9 +104,6 @@ class SettingsPage(tk.Frame):
         label = tk.Label(self, text="Settings Page", font=("Arial", 16, "bold"), bg="#f0f0f0")
         label.pack(pady=20, padx=20)
 
-        # --- TODO: Add your settings widgets here ---
-        # For example, you could have Entry fields to change
-        # controller.warning_time and controller.shutdown_time
         
         warning_label = tk.Label(self, text="Warning Time (HH:MM):", bg="#f0f0f0")
         warning_label.pack()
@@ -204,14 +201,14 @@ class ReasonPage(tk.Frame):
 
 class CountdownPage(tk.Frame):
     """
-    This is the final countdown page. It replaces 'countdown_window'.
+    This is the final countdown page.
     """
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent, bg="#991b1b")
         self.controller = controller
         self.remaining_seconds = 0
 
-        # Move all widgets from 'show_final_countdown' here
+        
         title = tk.Label(
             self,
             text="⚠️ FINAL WARNING",
@@ -379,29 +376,50 @@ class SleepEnforcerApp(tk.Tk):
         """
         Saves the new times from the SettingsPage.
         """
+        # Defining Current time
+        now = datetime.now()
+        # Splitting the shutdown time formerly in str to hour and minutes in int
+        shutdown_hour, shutdown_minute = map(int, self.shutdown_time.split(":"))
+        # Setting UP the Shutdown time in datetime former to be used for hours to sleep time check
+        existing_shutdown_dt = now.replace(hour=shutdown_hour, minute=shutdown_minute, second=0, microsecond=0)
         print("[DEBUG] Saving new settings...")
         
         try:
             # 1. Get the SettingsPage object from our frames dictionary
             settings_page = self.frames["SettingsPage"]
-            
-            # 2. Get the new values from its Entry boxes
-            new_warning_time = settings_page.warning_entry.get()
-            new_shutdown_time = settings_page.shutdown_entry.get()
-            
-            # 3. Update the CONTROLLER'S variables
-            self.warning_time = new_warning_time
-            self.shutdown_time = new_shutdown_time
-            
-            print(f"[DEBUG] New Warning Time: {self.warning_time}")
-            print(f"[DEBUG] New Shutdown Time: {self.shutdown_time}")
-            
-            # 4. (IMPORTANT) Update the StartupPage status label
-            self.frames["StartupPage"].update_status()
 
-            messagebox.showinfo("Settings Saved",
-                                "Your new times have been saved.",
-                                parent=self)
+            # If the shutdown time (e.g., 1 AM) is earlier than now (e.g., 11 PM), 
+            # it means the shutdown is scheduled for tomorrow, so add 1 day.
+            if existing_shutdown_dt < now:
+                existing_shutdown_dt+=timedelta(days=1)
+            # Denying option to change sleep time if shutdown time is in less than 3 hours
+            lockout_time = existing_shutdown_dt - timedelta(hours=3)
+            
+            # Now Checking Conditions
+            if now >= lockout_time and now<existing_shutdown_dt:
+                print("[DEBUG] Sleep Time Change Denied")
+                messagebox.showerror("Sleep Time Change Denied",
+                                      "Sleep Time Changes are not allowed 3 hours close to already set bedtime ", 
+                                      parent=self)
+                return
+            else:
+                # 2. Get the new values from its Entry boxes
+                new_warning_time = settings_page.warning_entry.get()
+                new_shutdown_time = settings_page.shutdown_entry.get()
+                
+                # 3. Update the CONTROLLER'S variables
+                self.warning_time = new_warning_time
+                self.shutdown_time = new_shutdown_time
+                
+                print(f"[DEBUG] New Warning Time: {self.warning_time}")
+                print(f"[DEBUG] New Shutdown Time: {self.shutdown_time}")
+                
+                # 4. (IMPORTANT) Update the StartupPage status label
+                self.frames["StartupPage"].update_status()
+
+                messagebox.showinfo("Settings Saved",
+                                    "Your new times have been saved.",
+                                    parent=self)
                                 
         except Exception as e:
             print(f"[ERROR] Could not save settings: {e}")
@@ -480,12 +498,13 @@ class SleepEnforcerApp(tk.Tk):
     
 
     def check_time(self):
-        current_time = datetime.now().strftime("%H:%M")
+        # Getting Current Time
+        self.current_time = datetime.now().strftime("%H:%M")
         
-        if current_time == self.warning_time:
+        if self.current_time == self.warning_time:
             print("[DEBUG] WARNING TIME MATCHED! Showing warning...")
             self.show_warning()
-        elif current_time == self.shutdown_time:
+        elif self.current_time == self.shutdown_time:
             print("[DEBUG] SHUTDOWN TIME MATCHED! Showing reason check")
             self.show_reason_prompt()
         
@@ -540,8 +559,8 @@ class SleepEnforcerApp(tk.Tk):
         reason_entry.delete(0, 'end')
 
     def grant_extension(self):
-        current_time = datetime.now()
-        new_shutdown = current_time + timedelta(minutes=self.extension_minutes)
+        self.current_time = datetime.now()
+        new_shutdown = self.current_time + timedelta(minutes=self.extension_minutes)
         self.shutdown_time = new_shutdown.strftime("%H:%M")
         self.warning_time = (new_shutdown - timedelta(minutes=5)).strftime("%H:%M")
         
