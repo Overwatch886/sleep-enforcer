@@ -51,11 +51,15 @@ class StartupPage(tk.Frame):
     This is the main "dashboard" page. It replaces your 'startup_window'.
     """
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent, bg="#f0f0f0")
+        tk.Frame.__init__(self, parent, bg="#2090b9")
         self.controller = controller
 
         # Add content for the startup page
-        label = tk.Label(self, text="💤 Healthy Sleep Enforcer is Active", font=("Arial", 14), bg="#f0f0f0")
+        label = tk.Label(self, 
+                         text="💤 Healthy Sleep Enforcer is Active", 
+                         font=("Arial", 14),
+                           bg="#cecfcf",
+                           fg= "black")
         label.pack(pady=20, padx=20)
         
         status_text = f"⏰ Warning at: {controller.warning_time}\n🛑 Shutdown check at: {controller.shutdown_time}"
@@ -71,14 +75,15 @@ class StartupPage(tk.Frame):
         settings_btn = tk.Button(
             self,
             text="Settings",
-            bg = "#3b82f6",
+            bg = "#ddf63b",
+            fg = "#000000",
             image=controller.settings_icon, # Get icon from controller
             compound="left",
             font=("Arial", 11),
             cursor="hand2",
             command=lambda: controller.show_frame("SettingsPage")
         )
-        settings_btn.pack(pady=20)
+        settings_btn.pack(pady=50)
 
         
 
@@ -485,7 +490,8 @@ class SleepEnforcerApp(tk.Tk):
             self.show_reason_prompt()
         
         # We are a tk.Tk object, so we can call 'after' on 'self'
-        self.after(60000, self.check_time) 
+        # Check Again it is sleep time in 30 seconds
+        self.after(30000, self.check_time) 
 
     def show_warning(self):
         # This is fine, messagebox is a dialog, not a page.
@@ -564,7 +570,7 @@ class SleepEnforcerApp(tk.Tk):
         # Stop all timers
         self.final_timer_active = False
         self.grace_timer_active = False
-        
+        self.show_frame('StartupPage')
         # Give windows some time
         time.sleep(0.3)
         
