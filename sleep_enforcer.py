@@ -98,7 +98,7 @@ class SettingsPage(tk.Frame):
     This is the settings page. It replaces your 'setting_window'.
     """
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent, bg="#f0f0f0")
+        tk.Frame.__init__(self, parent, bg="#20afb9")
         self.controller = controller
 
         label = tk.Label(self, text="Settings Page", font=("Arial", 16, "bold"), bg="#f0f0f0")
