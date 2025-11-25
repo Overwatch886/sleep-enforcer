@@ -509,8 +509,8 @@ class SleepEnforcerApp(tk.Tk):
             self.show_reason_prompt()
         
         # We are a tk.Tk object, so we can call 'after' on 'self'
-        # Check Again it is sleep time in 30 seconds
-        self.after(30000, self.check_time) 
+        # Check Again if it is sleep time in 60 seconds
+        self.after(60000, self.check_time) 
 
     def show_warning(self):
         # Bring the Warning Window to user focus
