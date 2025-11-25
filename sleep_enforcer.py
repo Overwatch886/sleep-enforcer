@@ -226,8 +226,9 @@ class CountdownPage(tk.Frame):
             fg="white"
         )
         self.countdown_label.pack(pady=(0, 20))
-        
-        hibernate_btn = tk.Button(
+        #I commented out the hibernate now button as
+        #  it would cause the timer to continue from where it start on pc restart if used'''
+        '''hibernate_btn = tk.Button(
             self,
             text="💾 Hibernate Now",
             font=("Arial", 12, "bold"),
@@ -239,7 +240,7 @@ class CountdownPage(tk.Frame):
             command=controller.hibernate_system,
             cursor="hand2"
         )
-        hibernate_btn.pack(pady=(0, 10))
+        hibernate_btn.pack(pady=(0, 10))'''
         
         reason_btn = tk.Button(
             self,
