@@ -513,6 +513,8 @@ class SleepEnforcerApp(tk.Tk):
         self.after(30000, self.check_time) 
 
     def show_warning(self):
+        # Bring the Warning Window to user focus
+        self.attributes("-topmost", True)
         # This is fine, messagebox is a dialog, not a page.
         messagebox.showwarning(
             "Bedtime Reminder",
@@ -521,7 +523,8 @@ class SleepEnforcerApp(tk.Tk):
         )
     
     def show_reason_prompt(self):
-        ### CHANGED: No Toplevel, just show the frame.
+        # Bring the Reason Prompt to User focus
+        self.attributes("-topmost", True)
         self.grace_timer_active = True
         print("You have 3 mins to respond")
         
@@ -572,6 +575,9 @@ class SleepEnforcerApp(tk.Tk):
         self.show_frame("StartupPage")
     
     def show_final_countdown(self):
+        # Bring the Final Countdown window to User focus
+        self.attributes("-topmost", True)
+
         self.final_timer_active = True
         
         ### CHANGED: Show the frame and tell it to start its countdown.
@@ -579,6 +585,9 @@ class SleepEnforcerApp(tk.Tk):
         self.frames["CountdownPage"].start_countdown()
 
     def reopen_reason_prompt(self):
+        # Bring the Reason Window to User focus
+        self.attributes("-topmost", True)
+
         self.final_timer_active = False  # Stop the countdown
         
         ### CHANGED: No 'destroy', just show the ReasonPage.
@@ -597,7 +606,7 @@ class SleepEnforcerApp(tk.Tk):
         try:
             subprocess.Popen(["cmd", "/c", "timeout /t 2 && shutdown /h && exit"], 
                              creationflags=subprocess.CREATE_NO_WINDOW)
-            sys.exit(0)
+            
         except Exception as e:
             # We can't show a messagebox here, window is gone.
             print(f"Hibernate error: {e}")
