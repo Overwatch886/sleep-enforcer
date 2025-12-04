@@ -130,9 +130,11 @@ class SettingsPage(tk.Frame):
             fg="white",
             cursor="hand2",
             # This calls the controller's "save_settings" method
-            command=lambda: controller.save_settings()
+            command= lambda: controller.save_settings()
         )
         save_btn.pack(pady=20)
+        self.warning_entry.bind("<Return>", lambda e:controller.save_settings())
+        self.shutdown_entry.bind("<Return>", lambda e:controller.save_settings())
 
         # Button to navigate back to the Startup page
         back_btn = tk.Button(
@@ -463,12 +465,19 @@ class SleepEnforcerApp(tk.Tk):
     def show_window(self, icon=None, item=None):
         # Bringing back the GUI to Run In the Foreground
         self.deiconify() 
+
+        # Code to Unminimize the program for proper visibility
+        if self.state() == 'iconic':
+            self.state('normal')
+
+        # COde to make the sleep enforcer the major focus f the user
         self.lift()
+        self.focus_force()
         self.attributes("-topmost", True)
+        self.after(100, lambda: self.attribute("-topmost", False))
 
     def on_minimizing_to_background(self):
         """Handle the user clicking the 'X' button."""
-        # TODO set up notification showing that sleep enforcer running in the background even when closed
         # In the notification centre
         self.withdraw()
    
@@ -572,6 +581,9 @@ class SleepEnforcerApp(tk.Tk):
             "Extension Granted",
             f"✅ Valid reason accepted!\n\nYou have {self.extension_minutes} more minutes."
         )
+
+        # Updating Time Variables on Startup Page
+        self.frames["StartupPage"].update_status()
         ### CHANGED: Show the main StartupPage again.
         self.show_frame("StartupPage")
     
