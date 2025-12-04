@@ -37,11 +37,14 @@ class SingleInstance:
                 os.kill(pid, 0)
                 print("Sleep Enforcer is already running!")
                 sys.exit(1)
-            except OSError:
+            except (OSError, ValueError, SystemError) as e:
+                print(f"[ERROR] The error {e} occurred")
                 pass
-        
-        with open(self.lockfile, 'w') as f:
-            f.write(str(os.getpid()))
+        try:
+            with open(self.lockfile, 'w') as f:
+                f.write(str(os.getpid()))
+        except IOError as e:
+            print(f"[ERROR] Could not write lock file {e}")
 
 # --- "Page" Frames (Views) ---
 # We define each "page" of your application as its own class that inherits from tk.Frame.
