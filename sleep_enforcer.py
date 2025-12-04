@@ -111,6 +111,12 @@ class SettingsPage(tk.Frame):
         self.warning_entry.insert(0, controller.warning_time)
         print(f"This is the new warning time time {controller.warning_time}")
         self.warning_entry.pack(pady=5)
+        # Enter key to save setting
+        self.warning_entry.bind("<Return>", lambda e:controller.save_settings())
+        print("[DEBUG] Enter Key used to save warning time")
+        # Escape key to go back to startup page
+        self.warning_entry.bind("<Escape>", lambda e:controller.show_frame("StartupPage"))
+        print("[DEBUG] Escape Key used to return to startup page")
 
         # Entry Fields and Logic to Change Shutdown Time
         shutdown_label = tk.Label(self, text="Shutdown Time (HH:MM):", bg="#f0f0f0", fg = "red")
@@ -119,6 +125,12 @@ class SettingsPage(tk.Frame):
         self.shutdown_entry.insert(0, controller.shutdown_time)
         print(f"This is the new shutdown time {controller.shutdown_time}")
         self.shutdown_entry.pack(pady=5)
+        # Enter key to save setting
+        self.shutdown_entry.bind("<Return>", lambda e:controller.save_settings())
+        print("[DEBUG] Enter Key used to save warning time")
+        # Escape key to go back to startup page
+        self.shutdown_entry.bind("<Escape>", lambda e:controller.show_frame("StartupPage"))
+        print("[DEBUG] Escape Key used to return to startup page")
         
         # --- (Add save button and logic) ---
         # --- NEW: The "Save" button ---
@@ -133,8 +145,7 @@ class SettingsPage(tk.Frame):
             command= lambda: controller.save_settings()
         )
         save_btn.pack(pady=20)
-        self.warning_entry.bind("<Return>", lambda e:controller.save_settings())
-        self.shutdown_entry.bind("<Return>", lambda e:controller.save_settings())
+        
 
         # Button to navigate back to the Startup page
         back_btn = tk.Button(
@@ -373,7 +384,21 @@ class SleepEnforcerApp(tk.Tk):
         """
         print(f"[DEBUG] Showing frame: {page_name}")
         frame = self.frames[page_name]
-        frame.tkraise() # This is the magic command!
+        frame.tkraise() # Brings the required frame to the top of the windows stack
+        # Bringing GUI to from background to foreground
+        self.deiconify()
+        # Code to Unminimize the program for proper visibility
+        if self.state() == 'iconic':
+            self.state('normal')
+        
+        # Asks windows to brings this window to the top of other window stacks, can be ignored by windows if user seems busy
+        self.lift()
+        # Forces the user to only be able to use this window and not other windows
+        self.focus_force()
+        # Brongs this windget to the top of other windows stacks forcefully (This would just be for 30 seconds anyways)
+        self.attributes("-topmost", True)
+        # Removes the topmost command after 30 seconds 
+        self.after(30000, lambda : self.attributes("-topmost", False))
 
     def save_settings(self):
         """
@@ -470,7 +495,7 @@ class SleepEnforcerApp(tk.Tk):
         if self.state() == 'iconic':
             self.state('normal')
 
-        # COde to make the sleep enforcer the major focus f the user
+        # Code to make the sleep enforcer the major focus window the user
         self.lift()
         self.focus_force()
         self.attributes("-topmost", True)
