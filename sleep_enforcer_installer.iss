@@ -1,5 +1,5 @@
 #define AppName "Sleep Enforcer"
-#define AppVersion "1.1.0"
+#define AppVersion "1.1.1"
 #define AppPublisher "Overwatch886"
 #define AppExeName "sleep_enforcer.exe"
 #define AppURL "https://github.com/Overwatch886/sleep-enforcer"
