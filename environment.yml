@@ -1,4 +1,4 @@
-name: sleep_enforcer_env
+name: sleep_enforcer_windows_env
 channels:
   - conda-forge
   - defaults
