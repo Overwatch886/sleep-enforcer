@@ -26,18 +26,18 @@ This project requires [Anaconda](https://www.anaconda.com/download) or [Minicond
    conda env create \-f environment.yml
 
    \# Activate the new environment  
-   conda activate sleep\_enforcer\_env
+   conda activate sleep\_enforcer\_windows\_env
 
 3. Run the application:  
-   \# Make sure your (sleep\_enforcer\_env) is active  
-   python sleep\_enforcer\_refactored.py
+   \# Make sure your (sleep\_enforcer\_windows\_env) is active  
+   python sleep\_enforcer.py
 
 ## **How to Build**
 
 This project can be built into a standalone executable using PyInstaller.
 
 1. Activate your environment:  
-   conda activate sleep\_enforcer\_env
+   conda activate sleep\_enforcer\_windows\_env
 
 2. Install PyInstaller in your environment:  
    \# PyInstaller is best installed with pip, even in a conda env  
@@ -45,5 +45,5 @@ This project can be built into a standalone executable using PyInstaller.
 
 3. Run the build command:  
    \# Make sure your icon is in an 'icons' folder  
-   pyinstaller \--onefile \--windowed \--add-data "icons;icons" sleep\_enforcer\_refactored.py
+   pyinstaller \--onedir \--windowed \--add-data "icons;icons" sleep\_enforcer.py
 
