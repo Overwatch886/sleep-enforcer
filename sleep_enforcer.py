@@ -37,6 +37,8 @@ class SingleInstance:
                 os.kill(pid, 0)
                 print("Sleep Enforcer is already running!")
                 sys.exit(1)
+                #--TODO-- review the functionality of this except block and understand the error message which occurs here 
+                # When a previous instance of the program is running.
             except (OSError, ValueError, SystemError) as e:
                 print(f"[ERROR] The error {e} occurred")
                 pass
@@ -168,7 +170,7 @@ class ReasonPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent, bg="#1e293b")
         self.controller = controller
-
+        
         # We move all the widget creation from 'show_reason_prompt' here
         # Note that 'self' is now the frame, not a 'Toplevel' window
 
@@ -189,6 +191,15 @@ class ReasonPage(tk.Frame):
             fg="#cbd5e1"
         )
         question.pack(pady=(0, 10))
+
+        self.reason_trials_limiter = tk.Label(
+            self,
+            text=f"Attempts remaining: {controller.no_of_reason_trials}",
+            font=("Arial", 12),
+            bg="#1e293b",
+            fg="#cbd5e1"
+        )
+        self.reason_trials_limiter.pack(pady=(0, 10))
         
         self.reason_entry = tk.Entry(
             self,
@@ -213,6 +224,8 @@ class ReasonPage(tk.Frame):
         
         # Bind Enter key to the controller's method
         self.reason_entry.bind('<Return>', lambda e: controller.check_reason())
+    
+
 
 
 class CountdownPage(tk.Frame):
@@ -257,8 +270,9 @@ class CountdownPage(tk.Frame):
             cursor="hand2"
         )
         hibernate_btn.pack(pady=(0, 10))'''
-        
-        reason_btn = tk.Button(
+        # This button is no longer needed since this page would only be shown if number of trials is exhausted
+        '''
+        self.reason_btn = tk.Button(
             self,
             text="⏱️ I Have a Valid Reason",
             font=("Arial", 11),
@@ -270,7 +284,8 @@ class CountdownPage(tk.Frame):
             command=controller.reopen_reason_prompt,
             cursor="hand2"
         )
-        reason_btn.pack()
+        self.reason_btn.pack()
+    '''
 
     def start_countdown(self):
         """Starts or resumes the countdown timer."""
@@ -328,8 +343,9 @@ class SleepEnforcerApp(tk.Tk):
         self.grace_timer_active = False
         self.final_timer_active = False
         self.valid_reasons = [
-            "client deadline", "assignment due", "emergency", "meeting"
+            "deadline", "assignment", "due", "emergency", "meeting"
         ]
+        self.no_of_reason_trials = 3
 
         # --- 3. Load Assets ---
         self.load_assets()
@@ -503,6 +519,23 @@ class SleepEnforcerApp(tk.Tk):
         self.focus_force()
         self.attributes("-topmost", True)
         self.after(100, lambda: self.attribute("-topmost", False))
+    
+    def handle_invalid_reasons(self):
+        self.no_of_reason_trials -= 1
+        print(f"[DEBUG] Invalid reason. Trials left: {self.no_of_reason_trials}")
+        reason_page = self.frames["ReasonPage"]
+        reason_page.reason_trials_limiter.config(
+                text=f"You have {self.no_of_reason_trials} trials left"
+                )
+        if self.no_of_reason_trials > 0:
+            messagebox.showwarning(
+                "Invalid Reason", 
+                f"That reason is not accepted.\nYou have {self.no_of_reason_trials} attempts left.",
+                parent=self
+            )
+            
+        else:
+            self.show_final_countdown()
 
     def on_minimizing_to_background(self):
         """Handle the user clicking the 'X' button."""
@@ -561,6 +594,8 @@ class SleepEnforcerApp(tk.Tk):
         )
     
     def show_reason_prompt(self):
+        # Rsetting number of resaon trials to 3
+        self.no_of_reason_trials = 3
         # Bring the Reason Prompt to User focus
         self.attributes("-topmost", True)
         self.grace_timer_active = True
@@ -586,15 +621,17 @@ class SleepEnforcerApp(tk.Tk):
         
         ### CHANGED: Get text from the 'ReasonPage' frame
         reason_entry = self.frames["ReasonPage"].reason_entry
-        reason = reason_entry.get().lower().strip()
+        reason = reason_entry.get().lower().strip().split()
+        print(f"[DEBUG] The given reason contains {reason}")
         
         is_valid = any(valid in reason for valid in self.valid_reasons)
         
-        ### CHANGED: No 'destroy'. Just grant extension or show countdown.
+        ### Grant extension or show countdown.
         if is_valid:
             self.grant_extension()
         else:
-            self.show_final_countdown()
+            self.handle_invalid_reasons()
+            #self.show_final_countdown()
         
         # Clear the entry field for next time
         reason_entry.delete(0, 'end')
@@ -620,10 +657,14 @@ class SleepEnforcerApp(tk.Tk):
         self.attributes("-topmost", True)
 
         self.final_timer_active = True
-        
         ### CHANGED: Show the frame and tell it to start its countdown.
         self.show_frame("CountdownPage")
-        self.frames["CountdownPage"].start_countdown()
+        try:
+            self.frames["CountdownPage"].start_countdown()
+        except Exception as e:
+            print(f"[ERROR] Failed to start countdown: {e}")
+        
+        
 
     def reopen_reason_prompt(self):
         # Bring the Reason Window to User focus
