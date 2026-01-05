@@ -67,7 +67,7 @@ class StartupPage(tk.Frame):
                            fg= "black")
         label.pack(pady=20, padx=20)
         
-        status_text = f"⏰ Warning at: {controller.warning_time}\n🛑 Shutdown check at: {controller.shutdown_time}"
+        status_text = f"⏰ Warning at: {controller.warning_time_str}\n🛑 Shutdown check at: {controller.shutdown_time_str}"
         
         # We save the status_label as 'self.status_label'
         # so we can access it in 'update_status'
@@ -95,7 +95,7 @@ class StartupPage(tk.Frame):
     # --- NEW: Add this method ---
     def update_status(self):
         """Updates the time labels when called by the controller."""
-        status_text = f"⏰ Warning at: {self.controller.warning_time}\n🛑 Shutdown check at: {self.controller.shutdown_time}"
+        status_text = f"⏰ Warning at: {self.controller.warning_time_str}\n🛑 Shutdown check at: {self.controller.shutdown_time_str}"
         self.status_label.config(text=status_text)
                                  
 class SettingsPage(tk.Frame):
@@ -113,8 +113,8 @@ class SettingsPage(tk.Frame):
         warning_label = tk.Label(self, text="Warning Time (HH:MM):", bg="#f0f0f0")
         warning_label.pack()
         self.warning_entry = tk.Entry(self)
-        self.warning_entry.insert(0, controller.warning_time)
-        print(f"This is the new warning time time {controller.warning_time}")
+        self.warning_entry.insert(0, controller.warning_time_str)
+        print(f"This is the new warning time  {controller.warning_time}")
         self.warning_entry.pack(pady=5)
         # Enter key to save setting
         self.warning_entry.bind("<Return>", lambda e:controller.save_settings())
@@ -127,15 +127,15 @@ class SettingsPage(tk.Frame):
         shutdown_label = tk.Label(self, text="Shutdown Time (HH:MM):", bg="#f0f0f0", fg = "red")
         shutdown_label.pack()
         self.shutdown_entry = tk.Entry(self)
-        self.shutdown_entry.insert(0, controller.shutdown_time)
+        self.shutdown_entry.insert(0, controller.shutdown_time_str)
         print(f"This is the new shutdown time {controller.shutdown_time}")
         self.shutdown_entry.pack(pady=5)
         # Enter key to save setting
         self.shutdown_entry.bind("<Return>", lambda e:controller.save_settings())
-        print("[DEBUG] Enter Key used to save warning time")
+        
         # Escape key to go back to startup page
         self.shutdown_entry.bind("<Escape>", lambda e:controller.show_frame("StartupPage"))
-        print("[DEBUG] Escape Key used to return to startup page")
+        
         
         # --- (Add save button and logic) ---
         # --- NEW: The "Save" button ---
@@ -171,12 +171,10 @@ class ReasonPage(tk.Frame):
         tk.Frame.__init__(self, parent, bg="#1e293b")
         self.controller = controller
         
-        # We move all the widget creation from 'show_reason_prompt' here
-        # Note that 'self' is now the frame, not a 'Toplevel' window
 
         title = tk.Label(
             self,
-            text=f"🌙 It's {controller.shutdown_time} - Time for Bed!",
+            text=f"🌙 It's {controller.shutdown_time_str} - Time for Bed!",
             font=("Arial", 16, "bold"),
             bg="#1e293b",
             fg="white"
@@ -238,14 +236,14 @@ class CountdownPage(tk.Frame):
         self.remaining_seconds = 0
 
         
-        title = tk.Label(
+        self.title = tk.Label(
             self,
             text="⚠️ FINAL WARNING",
             font=("Arial", 18, "bold"),
             bg="#991b1b",
             fg="white"
         )
-        title.pack(pady=(40, 15))
+        self.title.pack(pady=(40, 15))
         
         self.countdown_label = tk.Label(
             self,
@@ -287,27 +285,45 @@ class CountdownPage(tk.Frame):
         self.reason_btn.pack()
     '''
 
-    def start_countdown(self):
+    def start_countdown(self, countdown_type):
         """Starts or resumes the countdown timer."""
         self.remaining_seconds = self.controller.final_countdown
-        self.update_countdown_label()
+        self.update_countdown_label(countdown_type)
 
-    def update_countdown_label(self):
+    def update_countdown_label(self, countdown_type):
         """The recursive function to update the countdown label."""
         # Check the controller's flag to see if we should still be counting
         if not self.controller.final_timer_active:
+            self.controller.show_frame("StartupPage")
             return  # Stop the countdown
             
         if self.remaining_seconds > 0:
-            self.countdown_label.config(
-                text=f"System will hibernate in: {self.remaining_seconds}s"
-            )
             self.remaining_seconds -= 1
-            # Use 'self.after' (since this class is a widget)
-            self.after(1000, self.update_countdown_label)
+            if "break" == countdown_type:
+                self.countdown_label.config(
+                    text=f"Cool down and clear your mind. \n Your break ends in {self.remaining_seconds}s"
+                )
+            elif "hibernate" == countdown_type:
+                self.countdown_label.config(
+                    text=f"Shutdown in: {self.remaining_seconds}s"
+                )
+            else:
+                print("[ERROR] countdown text does not contain any known keyword to take action")
+                
+            print(f"[{datetime.now()}] {self.remaining_seconds} seconds left")
+            # Update the countdown every second
+            self.after(1000, lambda:self.update_countdown_label(countdown_type))
         else:
-            self.countdown_label.config(text="Hibernating...")
-            self.controller.hibernate_system()
+            if "break" == countdown_type:
+                self.countdown_label.config(text="Break over. You may continue working.")
+                self.controller.final_timer_active = False
+                self.after(2000, lambda: self.controller.show_frame("StartupPage"))
+            elif "hibernate" == countdown_type:
+                self.countdown_label.config(text="Hibernating...")
+                self.after(2000, lambda: self.controller.hibernate_system())
+            else:
+                print("[ERROR] countdown text does not contain any known keyword to take action")
+            
 
 # --- Main Application (Controller) ---
 ###
@@ -333,10 +349,17 @@ class SleepEnforcerApp(tk.Tk):
         self.title("Sleep Enforcer")
         self.geometry("500x300")
         self.protocol("WM_DELETE_WINDOW", self.on_minimizing_to_background) # Handle user closing window(this minimizes it to background)
+        self.current_time = datetime.now()
+        self.current_time_str = self.current_time.strftime("%H:%M")
 
-        # --- Copy all your logic variables ---
-        self.warning_time = "21:55"
-        self.shutdown_time = "22:00"
+        self.warning_time = self.convert_to_dt_format("21:55")
+        self.warning_time_str = self.warning_time.strftime("%H:%M")
+
+        self.shutdown_time = self.convert_to_dt_format("22:00")
+        self.shutdown_time_str = self.shutdown_time.strftime("%H:%M")
+
+        self.wake_time = self.convert_to_dt_format("05:00")
+        
         self.grace_period = 180
         self.final_countdown = 60
         self.extension_minutes = 30
@@ -346,7 +369,7 @@ class SleepEnforcerApp(tk.Tk):
             "deadline", "assignment", "due", "emergency", "meeting"
         ]
         self.no_of_reason_trials = 3
-
+        
         # --- 3. Load Assets ---
         self.load_assets()
         self.setup_tray() # Creating Notification Tray 
@@ -383,7 +406,23 @@ class SleepEnforcerApp(tk.Tk):
         self.show_frame("StartupPage")  # Show the first page
         self.check_time() # Start your time-checking logic
         
-
+    def convert_to_dt_format(self, time_to_convert):
+        
+        time_to_conv_hour, time_to_conv_minute = map(int, time_to_convert.split(":"))
+        # Setting UP the Shutdown time in datetime former to be used for hours to sleep time check
+        self.time_in_dt = self.current_time.replace(hour=time_to_conv_hour, minute=time_to_conv_minute, second=0, microsecond=0)
+        return self.time_in_dt
+        '''
+        shutdown_hour, shutdown_minute = map(int, self.shutdown_time.split(":"))
+        # Setting UP the Shutdown time in datetime former to be used for hours to sleep time check
+        self.existing_shutdown_dt = self.current_time.replace(hour=shutdown_hour, minute=shutdown_minute, second=0, microsecond=0)
+        print(self.existing_shutdown_dt)
+        print(type(self.existing_shutdown_dt))
+        
+        wake_hour, wake_minute = map(int, self.wake_time.split(":"))
+        # Splitting the shutdown time formerly in str to hour and minutes in int
+        self.wake_time_dt = self.current_time.replace(hour=wake_hour, minute=wake_minute, second=0, microsecond=0)
+        '''
     def load_assets(self):
             """Loads and stores required assets like icons."""
             settings_icon_path = resource_path("icons/settings_icon.png")
@@ -423,12 +462,7 @@ class SleepEnforcerApp(tk.Tk):
         """
         Saves the new times from the SettingsPage.
         """
-        # Defining Current time
-        now = datetime.now()
-        # Splitting the shutdown time formerly in str to hour and minutes in int
-        shutdown_hour, shutdown_minute = map(int, self.shutdown_time.split(":"))
-        # Setting UP the Shutdown time in datetime former to be used for hours to sleep time check
-        existing_shutdown_dt = now.replace(hour=shutdown_hour, minute=shutdown_minute, second=0, microsecond=0)
+        self.current_time=datetime.now()
         print("[DEBUG] Saving new settings...")
         
         try:
@@ -437,13 +471,13 @@ class SleepEnforcerApp(tk.Tk):
 
             # If the shutdown time (e.g., 1 AM) is earlier than now (e.g., 11 PM), 
             # it means the shutdown is scheduled for tomorrow, so add 1 day.
-            if existing_shutdown_dt < now:
-                existing_shutdown_dt+=timedelta(days=1)
+            if self.shutdown_time < self.current_time:
+                self.shutdown_time+=timedelta(days=1)
             # Denying option to change sleep time if shutdown time is in less than 3 hours
-            lockout_time = existing_shutdown_dt - timedelta(hours=3)
+            lockout_time = self.shutdown_time - timedelta(hours=3)
             
             # Now Checking Conditions
-            if now >= lockout_time and now<existing_shutdown_dt:
+            if self.current_time >= lockout_time and self.current_time < self.shutdown_time:
                 print("[DEBUG] Sleep Time Change Denied")
                 messagebox.showerror("Sleep Time Change Denied",
                                       "Sleep Time Changes are not allowed 3 hours close to already set bedtime ", 
@@ -455,11 +489,12 @@ class SleepEnforcerApp(tk.Tk):
                 new_shutdown_time = settings_page.shutdown_entry.get()
                 
                 # 3. Update the CONTROLLER'S variables
-                self.warning_time = new_warning_time
-                self.shutdown_time = new_shutdown_time
+                self.warning_time = self.convert_to_dt_format(new_warning_time)
+                self.shutdown_time = self.convert_to_dt_format(new_shutdown_time)
                 
-                print(f"[DEBUG] New Warning Time: {self.warning_time}")
-                print(f"[DEBUG] New Shutdown Time: {self.shutdown_time}")
+                print(f"[DEBUG] New Warning Time: {self.warning_time.strftime("%H:%M")}")
+
+                print(f"[DEBUG] New Shutdown Time: {self.shutdown_time.strftime("%H:%M")}")
                 
                 # 4. (IMPORTANT) Update the StartupPage status label
                 self.frames["StartupPage"].update_status()
@@ -518,7 +553,7 @@ class SleepEnforcerApp(tk.Tk):
         self.lift()
         self.focus_force()
         self.attributes("-topmost", True)
-        self.after(100, lambda: self.attribute("-topmost", False))
+        self.after(100, lambda: self.attributes("-topmost", False))
     
     def handle_invalid_reasons(self):
         self.no_of_reason_trials -= 1
@@ -570,18 +605,30 @@ class SleepEnforcerApp(tk.Tk):
 
     def check_time(self):
         # Getting Current Time
-        self.current_time = datetime.now().strftime("%H:%M")
-        
-        if self.current_time == self.warning_time:
-            print("[DEBUG] WARNING TIME MATCHED! Showing warning...")
-            self.show_warning()
-        elif self.current_time == self.shutdown_time:
-            print("[DEBUG] SHUTDOWN TIME MATCHED! Showing reason check")
-            self.show_reason_prompt()
-        
-        # We are a tk.Tk object, so we can call 'after' on 'self'
-        # Check Again if it is sleep time in 60 seconds
-        self.after(60000, self.check_time) 
+        self.current_time = datetime.now()
+        # Adding a day to wake time if it seems to be past current time
+        if self.wake_time < self.current_time:
+                self.wake_time+=timedelta(days=1)
+        if not self.grace_timer_active and not self.final_timer_active: # IF grace timer is not active, then go on with the check. 
+            if self.current_time.strftime("%H:%M")  == self.warning_time.strftime("%H:%M"):
+                print("[DEBUG] WARNING TIME MATCHED! Showing warning...")
+                self.show_warning()
+            elif self.current_time >= self.shutdown_time:
+                print("[DEBUG] SHUTDOWN TIME MATCHED! Showing reason check")
+                self.show_reason_prompt()
+            elif self.current_time >= self.shutdown_time and self.current_time<=self.wake_time:
+                print("[DEBUG] User is awake past the sleep time. Ask the user for a reason")
+                self.show_reason_prompt()
+            # We are a tk.Tk object, so we can call 'after' on 'self'
+            # Check Again if it is sleep time in 60 seconds
+            print(self.current_time)
+            print(self.warning_time)
+            print(self.shutdown_time)
+            print(self.wake_time)
+            self.after(60000, self.check_time)
+        else:
+            print(f"[DEBUG] Grace/Final timer is still active, check back in 1 minute")
+            self.after(60000, self.check_time)
 
     def show_warning(self):
         # Bring the Warning Window to user focus
@@ -599,21 +646,21 @@ class SleepEnforcerApp(tk.Tk):
         # Bring the Reason Prompt to User focus
         self.attributes("-topmost", True)
         self.grace_timer_active = True
-        print("You have 3 mins to respond")
         
         self.show_frame("ReasonPage")
+
+        print("You have 3 mins to respond")
+        
         # Focus the entry field on the ReasonPage
         self.frames["ReasonPage"].reason_entry.focus()
         
         # Start the grace period timer
         self.after(self.grace_period * 1000, self.handle_grace_timeout)
         
-        ### No 'protocol' or 'grab_set' needed, as it's not a separate window.
-        
     def handle_grace_timeout(self):
         if self.grace_timer_active:
-            ### CHANGED: No 'destroy', just show the next frame.
             self.grace_timer_active = False
+            print("[DEBUG] Grace timer has been put off")
             self.show_final_countdown()
     
     def check_reason(self):
@@ -628,43 +675,97 @@ class SleepEnforcerApp(tk.Tk):
         
         ### Grant extension or show countdown.
         if is_valid:
+            #--TODO--Set up a method to ask force user to take 5 minutes break before continuing work
+
+            # THis is to ensure that they are not rushing into the work and believe it is truly essential
+            # Make sure too set this up as an optional feature in settings page
+            print("[DEBUG] Valid reason provided. Granting extension...")
             self.grant_extension()
         else:
             self.handle_invalid_reasons()
-            #self.show_final_countdown()
+            
         
         # Clear the entry field for next time
         reason_entry.delete(0, 'end')
 
-    def grant_extension(self):
-        self.current_time = datetime.now()
-        new_shutdown = self.current_time + timedelta(minutes=self.extension_minutes)
-        self.shutdown_time = new_shutdown.strftime("%H:%M")
-        self.warning_time = (new_shutdown - timedelta(minutes=5)).strftime("%H:%M")
-        
-        messagebox.showinfo(
-            "Extension Granted",
-            f"✅ Valid reason accepted!\n\nYou have {self.extension_minutes} more minutes."
-        )
+    def take_5mins_break(self):
+        """5-minute break timer """
+        print("[DEBUG] 5 mins break activated")
+        print(f"[DEBUG] Current time: {self.current_time}")
+        print(f"[DEBUG] Break status is {self.final_timer_active}")
 
-        # Updating Time Variables on Startup Page
-        self.frames["StartupPage"].update_status()
-        ### CHANGED: Show the main StartupPage again.
-        self.show_frame("StartupPage")
+        self.show_frame("CountdownPage")
+        print("[DEBUG] CountdownPage frame shown")
+
+        countdownpage = self.frames["CountdownPage"]
+        print("[DEBUG] CountdownPage method called")
+
+        self.final_timer_active = True
+        print(f"[DEBUG] Break status is {self.final_timer_active}")
+
+        # Set 5 minute break duration
+        countdownpage.remaining_seconds = 300
+        print(f"[DEBUG] Countdown seconds set to: {countdownpage.remaining_seconds}")
+
+        # Show break notification
+        messagebox.showinfo(
+            "5 Minute Break",
+            "Please take a 5 minute break before continuing your work.",
+            parent=self
+        )
+        print("[DEBUG] Break notification messagebox shown")
+
+        # Start the countdown
+        #Changing Layouts of countdown page to be more calming
+        countdownpage.config(bg="#1e40af")
+        countdownpage.title.config(text="Take a Break", bg="#1e40af", fg="#dbeafe")
+        countdownpage.countdown_label.config(bg="#1e40af", fg="#dbeafe")
+        print("[DEBUG] CountdownPage title updated to '5 Minute Break'")
+
+       
+        print("[DEBUG] Countdown label update initiated")
+        print(f"[DEBUG] take_5mins_break() method completed, timer active: {self.final_timer_active}")
+        self.show_frame("CountdownPage")
+       
+        self.final_timer_active = True
+        # We want to use the same final countdown page and timer logic but just with 5 mins instead of 1 min
+        countdownpage.remaining_seconds = 300  # 5 minutes
+        countdownpage.update_countdown_label(countdown_type="break")
+     
+    def grant_extension(self):
+        self.take_5mins_break()
+        if not self.final_timer_active:
+            self.current_time = datetime.now()
+            new_shutdown = self.current_time + timedelta(minutes=self.extension_minutes)
+            self.shutdown_time = new_shutdown.strftime("%H:%M")
+            self.warning_time = (new_shutdown - timedelta(minutes=5)).strftime("%H:%M")
+            
+            messagebox.showinfo(
+                "Extension Granted",
+                f"✅ Valid reason accepted!\n\nYou have {self.extension_minutes} more minutes."
+            )
+
+            # Updating Time Variables on Startup Page
+            self.frames["StartupPage"].update_status()
+            ### CHANGED: Show the main StartupPage again.
+            self.show_frame("StartupPage")
     
     def show_final_countdown(self):
         # Bring the Final Countdown window to User focus
         self.attributes("-topmost", True)
 
         self.final_timer_active = True
+        print(f"[DEBUG] Final Countdown Started")
         ### CHANGED: Show the frame and tell it to start its countdown.
         self.show_frame("CountdownPage")
         try:
+            countdownpage = self.frames["CountdownPage"]
+            countdownpage.config(bg="#991b1b")
+            countdownpage.countdown_label.config(bg="#991b1b", fg="#dbeafe")
+            countdownpage.title.config(text="⚠️ FINAL WARNING", bg="#991b1b", fg="#dbeafe")
             self.frames["CountdownPage"].start_countdown()
         except Exception as e:
             print(f"[ERROR] Failed to start countdown: {e}")
-        
-        
 
     def reopen_reason_prompt(self):
         # Bring the Reason Window to User focus
