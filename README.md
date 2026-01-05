@@ -1,4 +1,4 @@
-# **💤 Sleep Enforcer**
+# ** Sleep Enforcer**
 
 A simple Python desktop application to enforce healthier sleep habits by  
 prompting for a reason to stay up and hibernating the computer if no  
