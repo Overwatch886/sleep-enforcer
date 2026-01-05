@@ -24,3 +24,9 @@ sleep_enforcer(tk.toplevel version).py
 
 # Installers
 installer_output/
+
+# Others
+my_extensions.txt
+
+# Continue 
+.continue/
