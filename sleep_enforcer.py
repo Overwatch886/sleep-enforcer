@@ -93,51 +93,48 @@ class SettingsPage(tk.Frame):
         tk.Frame.__init__(self, parent, bg="#f5f7fa")
         self.controller = controller
 
+        # Main container - centered
         container = tk.Frame(self, bg="#f5f7fa")
-        container.pack(padx=24, pady=22, fill='both', expand=True)
+        container.pack(expand=True, pady=10)
 
+        # Title
         title = tk.Label(container, text="⚙️ Settings", font=("Arial", 18, "bold"), bg="#f5f7fa", fg="#1e40af")
-        title.grid(row=0, column=0, columnspan=2, sticky='w', pady=(0,20))
+        title.pack(pady=(0,20))
 
+        # Create time options
+        time_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in range(0, 60, 15)]
+        
         # Warning time
-        warning_label = tk.Label(container, text="Warning Time (HH:MM):", bg="#f5f7fa", fg="#475569", font=("Arial", 10))
-        warning_label.grid(row=1, column=0, sticky='e', padx=(0,12), pady=(0,8))
+        warning_label = tk.Label(container, text="⏰ Warning Time", bg="#f5f7fa", fg="#1e293b", font=("Arial", 11, "bold"))
+        warning_label.pack(pady=(0,6))
 
-        # Creating warning time Options
-        time_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in range(0,60,15)]
-        self.warning_entry = ttk.Combobox(container, values=time_options, width=12, font=("Arial", 10), state='readonly')
-        self.warning_entry.set(controller.warning_time_str)
-        # Positioning the warning times dropbox
-        self.warning_entry.grid(row=1, column=1, sticky='w', pady=(0,8))
-        # Setting up shortcut keys
-        self.warning_entry.bind("<Return>", lambda e:controller.save_settings())
-        self.warning_entry.bind("<Escape>", lambda e:controller.show_frame("StartupPage"))
+        self.warning_combo = ttk.Combobox(container, values=time_options, width=20, state='readonly')
+        self.warning_combo.set(controller.warning_time_str)
+        self.warning_combo.pack(pady=(0,10))
 
         # Shutdown time
-        shutdown_label = tk.Label(container, text="Shutdown Time (HH:MM):", bg="#f5f7fa", fg="#dc2626", font=("Arial", 10, "bold"))
-        shutdown_label.grid(row=2, column=0, sticky='e', padx=(0,12), pady=(0,8))
+        shutdown_label = tk.Label(container, text="🌙 Shutdown Time", bg="#f5f7fa", fg="#dc2626", font=("Arial", 11, "bold"))
+        shutdown_label.pack(pady=(0,6))
 
-        # Creating Shutdown Time Options
-        self.shutdown_entry = ttk.Combobox(container, values=time_options, width=12, font=("Arial", 10), state='readonly')
-        self.shutdown_entry.set(controller.shutdown_time_str)
-        # Positioning the shutdown times dropbox
-        self.shutdown_entry.grid(row=2, column=1, sticky='w', pady=(0,8))
-        # Setting up Shortcut Keys
-        self.shutdown_entry.bind("<Return>", lambda e:controller.save_settings())
-        self.shutdown_entry.bind("<Escape>", lambda e:controller.show_frame("StartupPage"))
+        self.shutdown_combo = ttk.Combobox(container, values=time_options, width=20, state='readonly')
+        self.shutdown_combo.set(controller.shutdown_time_str)
+        self.shutdown_combo.pack(pady=(0,10))
 
-        # Strict break option
+        # Checkbox
         self.strict_var = tk.BooleanVar(value=controller.strict_break_mode)
         strict_check = ttk.Checkbutton(container, text="Enable mandatory 5-minute break", variable=self.strict_var)
-        strict_check.grid(row=3, column=0, columnspan=2, pady=(16,0), sticky='w')
+        strict_check.pack(pady=(10,30))
 
-        # Buttons footer
+        # Buttons
         footer = tk.Frame(container, bg="#f5f7fa")
-        footer.grid(row=4, column=0, columnspan=2, pady=26)
+        footer.pack()
+        
         save_btn = ttk.Button(footer, text="💾 Save Settings", command=lambda: controller.save_settings())
         save_btn.pack(side='left', padx=(0,10))
+        
         back_btn = ttk.Button(footer, text="← Back to Home", command=lambda: controller.show_frame("StartupPage"))
         back_btn.pack(side='left')
+
 
 class ReasonPage(tk.Frame):
     """
@@ -148,8 +145,8 @@ class ReasonPage(tk.Frame):
         self.controller = controller
 
         # Centered card
-        card = tk.Frame(self, bg="#ffffff", padx=24, pady=24, relief='flat', highlightthickness=0)
-        card.pack(expand=True, fill='both', padx=40, pady=40)
+        card = tk.Frame(self, bg="#ffffff", padx=40, pady=40, relief='flat', highlightthickness=0)
+        card.pack(expand=True, fill='both', padx=0, pady=0)
 
         title = tk.Label(card, text=f"🌙 It's {controller.shutdown_time_str} - Time for Bed!", font=("Arial", 17, "bold"), bg="#ffffff", fg="#1e293b")
         title.pack(pady=(0,16))
@@ -168,10 +165,10 @@ class ReasonPage(tk.Frame):
         btn_row = tk.Frame(card, bg="#ffffff")
         btn_row.pack()
         submit_btn = ttk.Button(btn_row, text="✓ Submit Reason", command=controller.check_reason)
-        submit_btn.pack(side='left', padx=(0,10))
+        submit_btn.pack(side='left', padx=(0,10), pady=10)
         hibernate_btn = ttk.Button(btn_row, text="✕ Hibernate", command=controller.show_final_countdown)
-        hibernate_btn.pack(side='left')
-
+        hibernate_btn.pack(side='left', pady=10)
+        ## TODO fix the key binding issue which allow you work on the reason page even without seeing it
         self.reason_entry.bind('<Return>', lambda e: controller.check_reason())
         self.reason_entry.bind('<Escape>', lambda e: controller.show_frame("StartupPage"))
     
@@ -407,6 +404,7 @@ class SleepEnforcerApp(tk.Tk):
         print(f"[DEBUG] Showing frame: {page_name}")
         frame = self.frames[page_name]
         frame.tkraise() # Brings the required frame to the top of the windows stack
+        frame.focus_set()
         # Bringing GUI to from background to foreground
         self.deiconify()
         # Code to Unminimize the program for proper visibility
