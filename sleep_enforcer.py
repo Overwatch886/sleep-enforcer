@@ -80,6 +80,8 @@ class StartupPage(tk.Frame):
         actions.pack(pady=20)
         settings_btn = ttk.Button(actions, text="⚙️ Settings", command=lambda: controller.show_frame("SettingsPage"))
         settings_btn.pack(ipadx=12, ipady=8)
+        settings_btn.bind('<Return>', lambda e: controller.show_frame('SettingsPage'))
+
 
     # --- NEW: Add this method ---
     def update_status(self):
@@ -111,6 +113,8 @@ class SettingsPage(tk.Frame):
         self.warning_combo = ttk.Combobox(container, values=time_options, width=20, state='readonly')
         self.warning_combo.set(controller.warning_time_str)
         self.warning_combo.pack(pady=(0,10))
+        # Bind key release for filtering
+        self.warning_combo.bind('<KeyRelease>', lambda e: self._filter_options(e, self.warning_combo, time_options))
 
         # Shutdown time
         shutdown_label = tk.Label(container, text="🌙 Shutdown Time", bg="#f5f7fa", fg="#dc2626", font=("Arial", 11, "bold"))
@@ -119,11 +123,15 @@ class SettingsPage(tk.Frame):
         self.shutdown_combo = ttk.Combobox(container, values=time_options, width=20, state='readonly')
         self.shutdown_combo.set(controller.shutdown_time_str)
         self.shutdown_combo.pack(pady=(0,10))
+        # Bind key release for filtering
+        self.shutdown_combo.bind('<KeyRelease>', lambda e: self._filter_options(e, self.shutdown_combo, time_options))
 
         # Checkbox
         self.strict_var = tk.BooleanVar(value=controller.strict_break_mode)
         strict_check = ttk.Checkbutton(container, text="Enable mandatory 5-minute break", variable=self.strict_var)
         strict_check.pack(pady=(10,30))
+        # Key Bindings for Easy Navigation
+        strict_check.bind('<Return>',lambda e: strict_check.invoke())
 
         # Buttons
         footer = tk.Frame(container, bg="#f5f7fa")
@@ -131,10 +139,38 @@ class SettingsPage(tk.Frame):
         
         save_btn = ttk.Button(footer, text="💾 Save Settings", command=lambda: controller.save_settings())
         save_btn.pack(side='left', padx=(0,10))
+        # Key bindings for easy app navigation
+        save_btn.bind('<Return>', lambda e: controller.save_settings())
         
         back_btn = ttk.Button(footer, text="← Back to Home", command=lambda: controller.show_frame("StartupPage"))
         back_btn.pack(side='left')
+        # Key bindings for easy app navigation
+        back_btn.bind('<Return>', lambda e: controller.show_frame('StartupPage'))
 
+    def _filter_options(self, event, combo, all_options):
+        """Filter options using 'starts with' logic and maintain cursor position."""
+        val = combo.get()
+        # Save current cursor position
+        pos = combo.index(tk.INSERT)
+
+        # 1. Logic Fix: Only match from the beginning of the string
+        if val == '':
+            filtered = all_options
+        else:
+            filtered = [item for item in all_options 
+                        if item.startswith(val) or (len(val) == 1 and item.startswith('0' + val))]
+        
+        combo['values'] = filtered
+
+        # 2. Focus Fix: Put the cursor back where it was
+        combo.icursor(pos)
+
+        # Only trigger the dropdown for actual data input
+        if event.keysym not in ('Return', 'Tab', 'Escape', 'Up', 'Down', 'BackSpace', 'Left', 'Right'):
+            if filtered:
+                combo.event_generate('<Down>')
+        
+        
 
 class ReasonPage(tk.Frame):
     """
@@ -168,9 +204,10 @@ class ReasonPage(tk.Frame):
         submit_btn.pack(side='left', padx=(0,10), pady=10)
         hibernate_btn = ttk.Button(btn_row, text="✕ Hibernate", command=controller.show_final_countdown)
         hibernate_btn.pack(side='left', pady=10)
-        ## TODO fix the key binding issue which allow you work on the reason page even without seeing it
+        
+        # Key bindings for easy app navigation
         self.reason_entry.bind('<Return>', lambda e: controller.check_reason())
-        self.reason_entry.bind('<Escape>', lambda e: controller.show_frame("StartupPage"))
+
     
 
 
@@ -208,37 +245,7 @@ class CountdownPage(tk.Frame):
             justify='center'
         )
         self.countdown_label.pack(pady=(0, 32), padx=20)
-        #I commented out the hibernate now button as
-        #  it would cause the timer to continue from where it start on pc restart if used'''
-        '''hibernate_btn = tk.Button(
-            self,
-            text="💾 Hibernate Now",
-            font=("Arial", 12, "bold"),
-            bg="#10b981",
-            fg="white",
-            padx=25,
-            pady=12,
-            # Call controller's method
-            command=controller.hibernate_system,
-            cursor="hand2"
-        )
-        hibernate_btn.pack(pady=(0, 10))'''
-        # This button is no longer needed since this page would only be shown if number of trials is exhausted
-        '''
-        self.reason_btn = tk.Button(
-            self,
-            text="⏱️ I Have a Valid Reason",
-            font=("Arial", 11),
-            bg="#3b82f6",
-            fg="white",
-            padx=25,
-            pady=10,
-            # Call controller's method
-            command=controller.reopen_reason_prompt,
-            cursor="hand2"
-        )
-        self.reason_btn.pack()
-    '''
+
 
     def start_countdown(self, countdown_type):
         """Starts or resumes the countdown timer."""
@@ -280,7 +287,7 @@ class CountdownPage(tk.Frame):
                 self.after(2000, lambda: self.controller.hibernate_system())
             else:
                 print("[ERROR] countdown text does not contain any known keyword to take action")
-            
+    
 
 # --- Main Application (Controller) ---
 ###
@@ -402,23 +409,55 @@ class SleepEnforcerApp(tk.Tk):
         Brings the requested frame to the top of the stack.
         """
         print(f"[DEBUG] Showing frame: {page_name}")
+        
+        # DISABLE all widgets on hidden frames
+        for frame_name, frame in self.frames.items():
+            if frame_name != page_name:
+                self.disable_all_widgets(frame)
+            else:
+                self.enable_all_widgets(frame)
+        
+        # Show the new frame
         frame = self.frames[page_name]
-        frame.tkraise() # Brings the required frame to the top of the windows stack
+        frame.tkraise()
         frame.focus_set()
-        # Bringing GUI to from background to foreground
+        
+        # Bringing GUI to foreground
         self.deiconify()
-        # Code to Unminimize the program for proper visibility
         if self.state() == 'iconic':
             self.state('normal')
         
-        # Asks windows to brings this window to the top of other window stacks, can be ignored by windows if user seems busy
         self.lift()
-        # Forces the user to only be able to use this window and not other windows
         self.focus_force()
-        # Brongs this windget to the top of other windows stacks forcefully (This would just be for 30 seconds anyways)
         self.attributes("-topmost", True)
-        # Removes the topmost command after 30 seconds 
-        self.after(30000, lambda : self.attributes("-topmost", False))
+        self.after(30000, lambda: self.attributes("-topmost", False))
+
+    def disable_all_widgets(self, frame):
+        """Recursively disable all widgets in a frame"""
+        for widget in frame.winfo_children():
+            try:
+                # Skip labels and frames, they don't have state
+                if isinstance(widget, (tk.Entry, ttk.Button, ttk.Combobox, ttk.Checkbutton)):
+                    widget.config(state='disabled')
+            except tk.TclError:
+                pass
+            
+            # Recursively disable child frames
+            if isinstance(widget, tk.Frame):
+                self.disable_all_widgets(widget)
+
+    def enable_all_widgets(self, frame):
+        """Recursively enable all widgets in a frame"""
+        for widget in frame.winfo_children():
+            try:
+                if isinstance(widget, (tk.Entry, ttk.Button, ttk.Combobox, ttk.Checkbutton)):
+                    widget.config(state='normal')
+            except tk.TclError:
+                pass
+            
+            # Recursively enable child frames
+            if isinstance(widget, tk.Frame):
+                self.enable_all_widgets(widget)
 
     def save_settings(self):
         """
@@ -430,6 +469,10 @@ class SleepEnforcerApp(tk.Tk):
         try:
             # 1. Get the SettingsPage object from our frames dictionary
             settings_page = self.frames["SettingsPage"]
+            # Updating the warning and shutdown time shown on the startup page immediately after saving settings
+            self.warning_time_str = self.warning_time.strftime("%H:%M")
+            self.shutdown_time_str = self.shutdown_time.strftime("%H:%M")
+            self.frames["StartupPage"].update_status()
 
             # If the shutdown time (e.g., 1 AM) is earlier than now (e.g., 11 PM), 
             # it means the shutdown is scheduled for tomorrow, so add 1 day.
@@ -447,8 +490,8 @@ class SleepEnforcerApp(tk.Tk):
                 return
             else:
                 # 2. Get the new values from its Entry boxes
-                new_warning_time = settings_page.warning_entry.get()
-                new_shutdown_time = settings_page.shutdown_entry.get()
+                new_warning_time = settings_page.warning_combo.get()
+                new_shutdown_time = settings_page.shutdown_combo.get()
                 
                 # 3. Update the CONTROLLER'S variables
                 self.warning_time = self.convert_to_dt_format(new_warning_time)
@@ -700,8 +743,8 @@ class SleepEnforcerApp(tk.Tk):
         if not self.final_timer_active:
             self.current_time = datetime.now()
             new_shutdown = self.current_time + timedelta(minutes=self.extension_minutes)
-            self.shutdown_time = new_shutdown.strftime("%H:%M")
-            self.warning_time = (new_shutdown - timedelta(minutes=5)).strftime("%H:%M")
+            self.shutdown_time = new_shutdown
+            self.warning_time = new_shutdown - timedelta(minutes=5)
             
             messagebox.showinfo(
                 "Extension Granted",
@@ -756,8 +799,7 @@ class SleepEnforcerApp(tk.Tk):
         except Exception as e:
             # We can't show a messagebox here, window is gone.
             print(f"Hibernate error: {e}")
-
-
+    
 if __name__ == "__main__":
     # Ensure only one instance is running
     single_instance = SingleInstance()
