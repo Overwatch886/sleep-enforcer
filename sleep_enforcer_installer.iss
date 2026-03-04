@@ -1,5 +1,5 @@
 #define AppName "Sleep Enforcer"
-#define AppVersion "1.1.1"
+#define AppVersion "1.2.0"
 #define AppPublisher "Overwatch886"
 #define AppExeName "sleep_enforcer.exe"
 #define AppURL "https://github.com/Overwatch886/sleep-enforcer"
@@ -29,11 +29,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startup"; Description: "Run at Windows startup (recommended)"; GroupDescription: "Auto-start:"; Flags: checkedonce
+Name: "startup"; Description: "Run at Windows startup (recommended)"; GroupDescription: "Auto-start:"
 
 [Files]
-Source: "dist\sleep_enforcer\sleep_enforcer.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dist\sleep_enforcer\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\sleep_enforcer.exe"; DestDir: "{app}"; Flags: ignoreversion 
 
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
