@@ -11,6 +11,7 @@ import tempfile
 from PIL import Image, ImageTk
 import pystray
 from pystray import MenuItem as item
+import psutil
 
 # Relative File Resolver to HElp Find OTher NON python resources
 
@@ -26,8 +27,8 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 
-# --- No changes to this class ---
 class SingleInstance:
+    '''This class ensures that only one instance if our sleep enforcer app is running'''
     def __init__(self):
         self.lockfile = os.path.join(tempfile.gettempdir(), 'sleep_enforcer.lock')
         
@@ -35,14 +36,17 @@ class SingleInstance:
             try:
                 with open(self.lockfile, 'r') as f:
                     pid = int(f.read().strip())
-                os.kill(pid, 0)
-                print("Sleep Enforcer is already running!")
-                sys.exit(1)
-                #--TODO-- review the functionality of this except block and understand the error message which occurs here 
-                # When a previous instance of the program is running.
-            except (OSError, ValueError, SystemError) as e:
-                print(f"[ERROR] The error {e} occurred")
-                pass
+                if psutil.pid_exists(pid):
+                    proc = psutil.Process(pid)
+                    if 'sleep_enforcer' in proc.name().lower() or 'python' in proc.name().lower():
+                        print("Sleep Enforcer is already running!")
+                        sys.exit(1)
+                    else:
+                        # PID exists but belongs to a different app, stale lock
+                        print(f"[INFO] Stale lock file found (PID {pid} belongs to '{proc.name()}'). Overwriting.")
+
+            except (OSError, ValueError, psutil.NoSuchProcess, psutil.AccessDenied) as e:
+                print(f"[INFO] Clearing invalid lock file: {e}")
         try:
             with open(self.lockfile, 'w') as f:
                 f.write(str(os.getpid()))
@@ -71,7 +75,7 @@ class StartupPage(tk.Frame):
         # Status card
         card = tk.Frame(self, bg="#ffffff", bd=1, relief='flat', highlightthickness=0)
         card.pack(padx=20, pady=15, fill='x')
-        status_text = f"⏰ Warning at {controller.warning_time_str}  •  🛑 Shutdown at {controller.shutdown_time_str}"
+        status_text = f"⏰ Warning at: {self.controller.warning_time_str}\n🛑 Shutdown check at: {self.controller.shutdown_time_str}"
         self.status_label = tk.Label(card, text=status_text, font=("Arial", 11), bg="#ffffff", fg="#334155")
         self.status_label.pack(padx=16, pady=14)
 
@@ -80,12 +84,18 @@ class StartupPage(tk.Frame):
         actions.pack(pady=20)
         settings_btn = ttk.Button(actions, text="⚙️ Settings", command=lambda: controller.show_frame("SettingsPage"))
         settings_btn.pack(ipadx=12, ipady=8)
-        settings_btn.bind('<Return>', lambda e: controller.show_frame('SettingsPage'))
+        
 
 
     # --- NEW: Add this method ---
     def update_status(self):
         """Updates the time labels when called by the controller."""
+        
+        print(self.controller.shutdown_time_str)
+        print(self.controller.warning_time_str)
+        self.controller.shutdown_time_str = self.controller.shutdown_time.strftime("%H:%M")
+        self.controller.warning_time_str = self.controller.warning_time.strftime("%H:%M")
+        
         status_text = f"⏰ Warning at: {self.controller.warning_time_str}\n🛑 Shutdown check at: {self.controller.shutdown_time_str}"
         self.status_label.config(text=status_text)
 
@@ -110,7 +120,7 @@ class SettingsPage(tk.Frame):
         warning_label = tk.Label(container, text="⏰ Warning Time", bg="#f5f7fa", fg="#1e293b", font=("Arial", 11, "bold"))
         warning_label.pack(pady=(0,6))
 
-        self.warning_combo = ttk.Combobox(container, values=time_options, width=20, state='readonly')
+        self.warning_combo = ttk.Combobox(container, values=time_options, width=20, state='normal')
         self.warning_combo.set(controller.warning_time_str)
         self.warning_combo.pack(pady=(0,10))
         # Bind key release for filtering
@@ -120,7 +130,7 @@ class SettingsPage(tk.Frame):
         shutdown_label = tk.Label(container, text="🌙 Shutdown Time", bg="#f5f7fa", fg="#dc2626", font=("Arial", 11, "bold"))
         shutdown_label.pack(pady=(0,6))
 
-        self.shutdown_combo = ttk.Combobox(container, values=time_options, width=20, state='readonly')
+        self.shutdown_combo = ttk.Combobox(container, values=time_options, width=20, state='normal')
         self.shutdown_combo.set(controller.shutdown_time_str)
         self.shutdown_combo.pack(pady=(0,10))
         # Bind key release for filtering
@@ -130,8 +140,7 @@ class SettingsPage(tk.Frame):
         self.strict_var = tk.BooleanVar(value=controller.strict_break_mode)
         strict_check = ttk.Checkbutton(container, text="Enable mandatory 5-minute break", variable=self.strict_var)
         strict_check.pack(pady=(10,30))
-        # Key Bindings for Easy Navigation
-        strict_check.bind('<Return>',lambda e: strict_check.invoke())
+        
 
         # Buttons
         footer = tk.Frame(container, bg="#f5f7fa")
@@ -139,13 +148,12 @@ class SettingsPage(tk.Frame):
         
         save_btn = ttk.Button(footer, text="💾 Save Settings", command=lambda: controller.save_settings())
         save_btn.pack(side='left', padx=(0,10))
-        # Key bindings for easy app navigation
-        save_btn.bind('<Return>', lambda e: controller.save_settings())
+       
         
         back_btn = ttk.Button(footer, text="← Back to Home", command=lambda: controller.show_frame("StartupPage"))
         back_btn.pack(side='left')
-        # Key bindings for easy app navigation
-        back_btn.bind('<Return>', lambda e: controller.show_frame('StartupPage'))
+        
+       ## TODO Work on making the focus set automatically to shutdown input
 
     def _filter_options(self, event, combo, all_options):
         """Filter options using 'starts with' logic and maintain cursor position."""
@@ -205,8 +213,7 @@ class ReasonPage(tk.Frame):
         hibernate_btn = ttk.Button(btn_row, text="✕ Hibernate", command=controller.show_final_countdown)
         hibernate_btn.pack(side='left', pady=10)
         
-        # Key bindings for easy app navigation
-        self.reason_entry.bind('<Return>', lambda e: controller.check_reason())
+        
 
     
 
@@ -281,12 +288,17 @@ class CountdownPage(tk.Frame):
             if "break" == countdown_type:
                 self.countdown_label.config(text="Break over. You may continue working.", wraplength=400)
                 self.controller.final_timer_active = False
+                self.controller.is_on_break = False
                 self.after(2000, lambda: self.controller.show_frame("StartupPage"))
             elif "hibernate" == countdown_type:
                 self.countdown_label.config(text="Hibernating...", wraplength=400)
+                self.controller.final_timer_active = False
                 self.after(2000, lambda: self.controller.hibernate_system())
             else:
                 print("[ERROR] countdown text does not contain any known keyword to take action")
+
+            
+
     
 
 # --- Main Application (Controller) ---
@@ -297,7 +309,7 @@ class CountdownPage(tk.Frame):
 class SleepEnforcerApp(tk.Tk):
     
     def __init__(self):
-        super().__init__() # Initialize tk.Tk
+        super().__init__()
         # App Windows Icon
         try:
             # We use the *same* .ico file
@@ -319,7 +331,7 @@ class SleepEnforcerApp(tk.Tk):
         self.warning_time = self.convert_to_dt_format("21:55")
         self.warning_time_str = self.warning_time.strftime("%H:%M")
 
-        self.shutdown_time = self.convert_to_dt_format("22:00")
+        self.shutdown_time = self.convert_to_dt_format("23:10")
         self.shutdown_time_str = self.shutdown_time.strftime("%H:%M")
 
         self.wake_time = self.convert_to_dt_format("05:00")
@@ -337,7 +349,7 @@ class SleepEnforcerApp(tk.Tk):
 
         # Settings and Configurations
         self.strict_break_mode = True
-
+        self.is_on_break=False
         # --- 3. Load Assets ---
         self.load_assets()
         self.setup_tray() # Creating Notification Tray 
@@ -373,6 +385,24 @@ class SleepEnforcerApp(tk.Tk):
         self.center_window(self, 500, 300) # Center the main window
         self.show_frame("StartupPage")  # Show the first page
         self.check_time() # Start your time-checking logic
+
+        # Global binding for the Enter key
+        self.bind_all('<Return>', self._handle_global_return)
+
+        # Listening for the Unmap event during widget minmizing(when anything is minimize, it lets me know)
+        self.bind('<Unmap>', self.restore_window_on_minimize)
+
+    def _handle_global_return(self, event):
+        """
+        Simulates a mouse click (invoke) whenever Enter is pressed 
+        on a button or checkbox.
+        """
+        widget = event.widget
+        # We only want to 'invoke' widgets that support clicking (Buttons/Checkbuttons)
+        # We exclude Entries because they use Enter for submission logic.
+        if isinstance(widget, (ttk.Button, ttk.Checkbutton, tk.Button, tk.Checkbutton)):
+            widget.invoke()
+            return "break" # Prevents the event from doing anything else
         
     def convert_to_dt_format(self, time_to_convert):
         
@@ -430,7 +460,7 @@ class SleepEnforcerApp(tk.Tk):
         self.lift()
         self.focus_force()
         self.attributes("-topmost", True)
-        self.after(30000, lambda: self.attributes("-topmost", False))
+        self.after(10000, lambda: self.attributes("-topmost", False))
 
     def disable_all_widgets(self, frame):
         """Recursively disable all widgets in a frame"""
@@ -476,8 +506,9 @@ class SleepEnforcerApp(tk.Tk):
 
             # If the shutdown time (e.g., 1 AM) is earlier than now (e.g., 11 PM), 
             # it means the shutdown is scheduled for tomorrow, so add 1 day.
-            if self.shutdown_time < self.current_time:
+            if self.shutdown_time < self.current_time or self.warning_time < self.current_time:
                 self.shutdown_time+=timedelta(days=1)
+                self.warning_time+=timedelta(days=1)
             # Denying option to change sleep time if shutdown time is in less than 3 hours
             lockout_time = self.shutdown_time - timedelta(hours=3)
             
@@ -514,7 +545,7 @@ class SleepEnforcerApp(tk.Tk):
         except Exception as e:
             print(f"[ERROR] Could not save settings: {e}")
             messagebox.showerror("Error",
-                                 f"Could not save settings:\n{e}",
+                                 f"Could not save settings: Invalid Inputs",
                                  parent=self)
     def setup_tray(self):
         # Creating the System Tray for Background Running Notification
@@ -582,24 +613,38 @@ class SleepEnforcerApp(tk.Tk):
 
     def on_minimizing_to_background(self):
         """Handle the user clicking the 'X' button."""
-        # In the notification centre
-        self.withdraw()
-   
-        # Displaying Notification of Background running
-        if hasattr(self, 'tray_icon'):
-            print("[DEBUG] Tray Icon Exists, Displaying Notification")
-            try:
-                self.tray_icon.notify(
-                "Sleep Enforcer is running in the background. \nCheck Notification Tray To Find Me",
-                "Nice try! I'm still here. 👀" 
-                )
-                print("[DEBUG] Background Run Notification Displayed")
-            except Exception as e:
-                    print(f"[ERROR] Notification failed: {e}")
-        else:
-            print("[ERROR] Tray Icon Not Found")
+        # Check if they are trying to escape the break!
+        if getattr(self, 'is_on_break', False):
+            messagebox.showwarning("Locked", "Hey! Stop trying to evade the break.\nCool down and rest.", parent=self)
+            self.lift()
+            self.focus_force()
+            return # Stops them from minimizing by ending this function here
+        else:   
+            # In the notification centre
+            self.withdraw()
+    
+            # Displaying Notification of Background running
+            if hasattr(self, 'tray_icon'):
+                print("[DEBUG] Tray Icon Exists, Displaying Notification")
+                try:
+                    self.tray_icon.notify(
+                    "Sleep Enforcer is running in the background. \nCheck Notification Tray To Find Me",
+                    "Nice try! I'm still here. 👀" 
+                    )
+                    print("[DEBUG] Background Run Notification Displayed")
+                except Exception as e:
+                        print(f"[ERROR] Notification failed: {e}")
+            else:
+                print("[ERROR] Tray Icon Not Found")
 
-        
+    def restore_window_on_minimize(self, event):
+        if event.widget == self and self.is_on_break==True:
+            # Bring the window from minimozed state to my screen
+            self.deiconify()
+            # Bring the window to the top of other window stacks
+            self.lift()
+            # Hijack the keyboard and mouse to my window
+            self.focus_force()
             
   
     # Windows positioning and centering
@@ -621,9 +666,6 @@ class SleepEnforcerApp(tk.Tk):
             if self.current_time.strftime("%H:%M")  == self.warning_time.strftime("%H:%M"):
                 print("[DEBUG] WARNING TIME MATCHED! Showing warning...")
                 self.show_warning()
-            elif self.current_time >= self.shutdown_time:
-                print("[DEBUG] SHUTDOWN TIME MATCHED! Showing reason check")
-                self.show_reason_prompt()
             elif self.current_time >= self.shutdown_time and self.current_time<=self.wake_time:
                 print("[DEBUG] User is awake past the sleep time. Ask the user for a reason")
                 self.show_reason_prompt()
@@ -672,7 +714,7 @@ class SleepEnforcerApp(tk.Tk):
             self.show_final_countdown()
     
     def check_reason(self):
-        self.grace_timer_active = False
+        
         
         ### CHANGED: Get text from the 'ReasonPage' frame
         reason_entry = self.frames["ReasonPage"].reason_entry
@@ -683,12 +725,25 @@ class SleepEnforcerApp(tk.Tk):
         
         ### Grant extension or show countdown.
         if is_valid:
-            #--TODO--Set up a method to ask force user to take 5 minutes break before continuing work
-
-            # THis is to ensure that they are not rushing into the work and believe it is truly essential
-            # Make sure too set this up as an optional feature in settings page
+            self.grace_timer_active = False
+           
             print("[DEBUG] Valid reason provided. Granting extension...")
             self.grant_extension()
+            messagebox.showinfo(
+                "Extension Granted",
+                f'''✅ Valid reason accepted!\n\nYou have {self.extension_minutes} more minutes.
+                \n Your Extension time starts now ''' 
+            )
+            if self.strict_break_mode:
+                self.take_5mins_break()
+                # Updating Time Variables on Startup Page
+                self.frames["StartupPage"].update_status()
+                
+            else:
+                # Updating Time Variables on Startup Page
+                self.frames["StartupPage"].update_status()
+                # Show the main StartupPage again.
+                self.show_frame("StartupPage")
         else:
             self.handle_invalid_reasons()
             
@@ -709,11 +764,10 @@ class SleepEnforcerApp(tk.Tk):
         print("[DEBUG] CountdownPage method called")
 
         self.final_timer_active = True
-        print(f"[DEBUG] Break status is {self.final_timer_active}")
+        self.is_on_break = True
+        print(f"[DEBUG] Break status is {self.is_on_break}")
 
-        # Set 5 minute break duration
-        countdownpage.remaining_seconds = 300
-        print(f"[DEBUG] Countdown seconds set to: {countdownpage.remaining_seconds}")
+    
 
         # Show break notification
         messagebox.showinfo(
@@ -733,28 +787,18 @@ class SleepEnforcerApp(tk.Tk):
         print(f"[DEBUG] take_5mins_break() method completed, timer active: {self.final_timer_active}")
         self.show_frame("CountdownPage")
        
-        self.final_timer_active = True
         # We want to use the same final countdown page and timer logic but just with 5 mins instead of 1 min
-        countdownpage.remaining_seconds = 300  # 5 minutes
+        countdownpage.remaining_seconds = 10  # 5 minutes
         countdownpage.update_countdown_label(countdown_type="break")
      
     def grant_extension(self):
-        self.take_5mins_break()
-        if not self.final_timer_active:
-            self.current_time = datetime.now()
-            new_shutdown = self.current_time + timedelta(minutes=self.extension_minutes)
-            self.shutdown_time = new_shutdown
-            self.warning_time = new_shutdown - timedelta(minutes=5)
+        self.current_time = datetime.now()
+        new_shutdown = self.current_time + timedelta(minutes=self.extension_minutes)
+        self.shutdown_time = new_shutdown
+        self.warning_time = new_shutdown - timedelta(minutes=5)
+        print("New times saved after extension")
             
-            messagebox.showinfo(
-                "Extension Granted",
-                f"✅ Valid reason accepted!\n\nYou have {self.extension_minutes} more minutes."
-            )
-
-            # Updating Time Variables on Startup Page
-            self.frames["StartupPage"].update_status()
-            ### CHANGED: Show the main StartupPage again.
-            self.show_frame("StartupPage")
+            
     
     def show_final_countdown(self):
         # Bring the Final Countdown window to User focus
