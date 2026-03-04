@@ -331,7 +331,7 @@ class SleepEnforcerApp(tk.Tk):
         self.warning_time = self.convert_to_dt_format("21:55")
         self.warning_time_str = self.warning_time.strftime("%H:%M")
 
-        self.shutdown_time = self.convert_to_dt_format("23:10")
+        self.shutdown_time = self.convert_to_dt_format("22:00")
         self.shutdown_time_str = self.shutdown_time.strftime("%H:%M")
 
         self.wake_time = self.convert_to_dt_format("05:00")
@@ -788,7 +788,7 @@ class SleepEnforcerApp(tk.Tk):
         self.show_frame("CountdownPage")
        
         # We want to use the same final countdown page and timer logic but just with 5 mins instead of 1 min
-        countdownpage.remaining_seconds = 10  # 5 minutes
+        countdownpage.remaining_seconds = 300  # 5 minutes
         countdownpage.update_countdown_label(countdown_type="break")
      
     def grant_extension(self):
