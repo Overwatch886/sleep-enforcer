@@ -17,33 +17,36 @@ valid reason is given.
 This project requires [Anaconda](https://www.anaconda.com/download) or [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
 
 1. Clone the repository:  
+   ```bash
    git clone [https://github.com/Overwatch886/sleep-enforcer.git](https://github.com/Overwatch886/sleep-enforcer.git)  
    cd sleep-enforcer
 
 2. Create and activate the Conda environment:  
-   \# This reads the environment.yml file, creates the 'sleep\_enforcer\_env',  
-   \# and installs all dependencies (Python, Pillow) in one step.  
-   conda env create \-f environment.yml
+   ```bash
+   # This reads the environment.yml file, creates the 'sleep_enforcer_windows_env',  
+   # and installs all dependencies (Python, Pillow) in one step.  
+   conda env create -f environment.yml
 
-   \# Activate the new environment  
-   conda activate sleep\_enforcer\_windows\_env
+   # Activate the new environment  
+   conda activate sleep_enforcer_windows_env
 
 3. Run the application:  
-   \# Make sure your (sleep\_enforcer\_windows\_env) is active  
-   python sleep\_enforcer.py
+   ```bash
+   # Make sure your (sleep_enforcer_windows_env) is active  
+   python sleep_enforcer.py
 
 ## **How to Build**
 
 This project can be built into a standalone executable using PyInstaller.
 
 1. Activate your environment:  
-   conda activate sleep\_enforcer\_windows\_env
+   ```bash
+   conda activate sleep_enforcer_windows_env
 
 2. Install PyInstaller in your environment:  
-   \# PyInstaller is best installed with pip, even in a conda env  
+   ```bash
    pip install pyinstaller
 
-3. Run the build command:  
-   \# Make sure your icon is in an 'icons' folder  
-   pyinstaller \--onedir \--windowed \--add-data "icons;icons" sleep\_enforcer.py
-
+3. Run the build command: 
+   ```bash
+   pyinstaller sleep_enforcer.spec
