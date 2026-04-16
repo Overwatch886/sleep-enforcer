@@ -75,11 +75,7 @@ class StartupPage(tk.Frame):
         # Status card
         card = tk.Frame(self, bg="#ffffff", bd=1, relief='flat', highlightthickness=0)
         card.pack(padx=20, pady=15, fill='x')
-<<<<<<< HEAD
-        status_text = f"⏰ Warning at {controller.warning_time_str}  •  🛑 Shutdown at {controller.shutdown_time_str}"
-=======
         status_text = f"⏰ Warning at: {self.controller.warning_time_str}\n🛑 Shutdown check at: {self.controller.shutdown_time_str}"
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
         self.status_label = tk.Label(card, text=status_text, font=("Arial", 11), bg="#ffffff", fg="#334155")
         self.status_label.pack(padx=16, pady=14)
 
@@ -88,10 +84,7 @@ class StartupPage(tk.Frame):
         actions.pack(pady=20)
         settings_btn = ttk.Button(actions, text="⚙️ Settings", command=lambda: controller.show_frame("SettingsPage"))
         settings_btn.pack(ipadx=12, ipady=8)
-<<<<<<< HEAD
-=======
         
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
 
 
     # --- NEW: Add this method ---
@@ -112,44 +105,6 @@ class SettingsPage(tk.Frame):
         tk.Frame.__init__(self, parent, bg="#f5f7fa")
         self.controller = controller
 
-<<<<<<< HEAD
-        container = tk.Frame(self, bg="#f5f7fa")
-        container.pack(padx=24, pady=22, fill='both', expand=True)
-
-        title = tk.Label(container, text="⚙️ Settings", font=("Arial", 18, "bold"), bg="#f5f7fa", fg="#1e40af")
-        title.grid(row=0, column=0, columnspan=2, sticky='w', pady=(0,20))
-
-        # Warning time
-        warning_label = tk.Label(container, text="Warning Time (HH:MM):", bg="#f5f7fa", fg="#475569", font=("Arial", 10))
-        warning_label.grid(row=1, column=0, sticky='e', padx=(0,12), pady=(0,8))
-        self.warning_entry = tk.Entry(container, width=14, font=("Arial", 10))
-        self.warning_entry.insert(0, controller.warning_time_str)
-        self.warning_entry.grid(row=1, column=1, sticky='w', pady=(0,8))
-        self.warning_entry.bind("<Return>", lambda e:controller.save_settings())
-        self.warning_entry.bind("<Escape>", lambda e:controller.show_frame("StartupPage"))
-
-        # Shutdown time
-        shutdown_label = tk.Label(container, text="Shutdown Time (HH:MM):", bg="#f5f7fa", fg="#dc2626", font=("Arial", 10, "bold"))
-        shutdown_label.grid(row=2, column=0, sticky='e', padx=(0,12), pady=(0,8))
-        self.shutdown_entry = tk.Entry(container, width=14, font=("Arial", 10))
-        self.shutdown_entry.insert(0, controller.shutdown_time_str)
-        self.shutdown_entry.grid(row=2, column=1, sticky='w', pady=(0,8))
-        self.shutdown_entry.bind("<Return>", lambda e:controller.save_settings())
-        self.shutdown_entry.bind("<Escape>", lambda e:controller.show_frame("StartupPage"))
-
-        # Strict break option
-        self.strict_var = tk.BooleanVar(value=controller.strict_break_mode)
-        strict_check = ttk.Checkbutton(container, text="Enable mandatory 5-minute break", variable=self.strict_var)
-        strict_check.grid(row=3, column=0, columnspan=2, pady=(16,0), sticky='w')
-
-        # Buttons footer
-        footer = tk.Frame(container, bg="#f5f7fa")
-        footer.grid(row=4, column=0, columnspan=2, pady=26)
-        save_btn = ttk.Button(footer, text="💾 Save Settings", command=lambda: controller.save_settings())
-        save_btn.pack(side='left', padx=(0,10))
-        back_btn = ttk.Button(footer, text="← Back to Home", command=lambda: controller.show_frame("StartupPage"))
-        back_btn.pack(side='left')
-=======
         # Main container - centered
         container = tk.Frame(self, bg="#f5f7fa")
         container.pack(expand=True, pady=10)
@@ -224,7 +179,6 @@ class SettingsPage(tk.Frame):
                 combo.event_generate('<Down>')
         
         
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
 
 class ReasonPage(tk.Frame):
     """
@@ -235,13 +189,8 @@ class ReasonPage(tk.Frame):
         self.controller = controller
 
         # Centered card
-<<<<<<< HEAD
-        card = tk.Frame(self, bg="#ffffff", padx=24, pady=24, relief='flat', highlightthickness=0)
-        card.pack(expand=True, fill='both', padx=40, pady=40)
-=======
         card = tk.Frame(self, bg="#ffffff", padx=40, pady=40, relief='flat', highlightthickness=0)
         card.pack(expand=True, fill='both', padx=0, pady=0)
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
 
         title = tk.Label(card, text=f"🌙 It's {controller.shutdown_time_str} - Time for Bed!", font=("Arial", 17, "bold"), bg="#ffffff", fg="#1e293b")
         title.pack(pady=(0,16))
@@ -256,17 +205,6 @@ class ReasonPage(tk.Frame):
         self.reason_entry.pack(pady=(0, 20))
         self.reason_entry.focus()
 
-<<<<<<< HEAD
-        btn_row = tk.Frame(card, bg="#ffffff")
-        btn_row.pack()
-        submit_btn = ttk.Button(btn_row, text="✓ Submit Reason", command=controller.check_reason)
-        submit_btn.pack(side='left', padx=(0,10))
-        cancel_btn = ttk.Button(btn_row, text="✕ Cancel", command=lambda: controller.show_frame("StartupPage"))
-        cancel_btn.pack(side='left')
-
-        self.reason_entry.bind('<Return>', lambda e: controller.check_reason())
-        self.reason_entry.bind('<Escape>', lambda e: controller.show_frame("StartupPage"))
-=======
         # Setting up the submit and hibernate buttons on the reason page
         btn_row = tk.Frame(card, bg="#ffffff")
         btn_row.pack()
@@ -277,7 +215,6 @@ class ReasonPage(tk.Frame):
         
         
 
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
     
 
 
@@ -291,15 +228,9 @@ class CountdownPage(tk.Frame):
         self.controller = controller
         self.remaining_seconds = 0
 
-<<<<<<< HEAD
-        # Centered card area
-        card = tk.Frame(self, bg=self['bg'])
-        card.pack(expand=True, fill='both')
-=======
         # Centered card area with proper fill
         card = tk.Frame(self, bg=self['bg'])
         card.pack(expand=True, fill='both', padx=0, pady=0)
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
 
         self.title = tk.Label(
             card,
@@ -310,48 +241,6 @@ class CountdownPage(tk.Frame):
         )
         self.title.pack(pady=(48, 24))
 
-<<<<<<< HEAD
-        # Main countdown display
-        self.countdown_label = tk.Label(
-            card,
-            text="",
-            font=("Arial", 28, "bold"),
-            bg=card['bg'],
-            fg="#fbbf24"
-        )
-        self.countdown_label.pack(pady=(0, 32))
-        #I commented out the hibernate now button as
-        #  it would cause the timer to continue from where it start on pc restart if used'''
-        '''hibernate_btn = tk.Button(
-            self,
-            text="💾 Hibernate Now",
-            font=("Arial", 12, "bold"),
-            bg="#10b981",
-            fg="white",
-            padx=25,
-            pady=12,
-            # Call controller's method
-            command=controller.hibernate_system,
-            cursor="hand2"
-        )
-        hibernate_btn.pack(pady=(0, 10))'''
-        # This button is no longer needed since this page would only be shown if number of trials is exhausted
-        '''
-        self.reason_btn = tk.Button(
-            self,
-            text="⏱️ I Have a Valid Reason",
-            font=("Arial", 11),
-            bg="#3b82f6",
-            fg="white",
-            padx=25,
-            pady=10,
-            # Call controller's method
-            command=controller.reopen_reason_prompt,
-            cursor="hand2"
-        )
-        self.reason_btn.pack()
-    '''
-=======
         # Main countdown display with wrapping
         self.countdown_label = tk.Label(
             card,
@@ -364,7 +253,6 @@ class CountdownPage(tk.Frame):
         )
         self.countdown_label.pack(pady=(0, 32), padx=20)
 
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
 
     def start_countdown(self, countdown_type):
         """Starts or resumes the countdown timer."""
@@ -461,11 +349,7 @@ class SleepEnforcerApp(tk.Tk):
 
         # Settings and Configurations
         self.strict_break_mode = True
-<<<<<<< HEAD
-
-=======
         self.is_on_break=False
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
         # --- 3. Load Assets ---
         self.load_assets()
         self.setup_tray() # Creating Notification Tray 
@@ -894,15 +778,9 @@ class SleepEnforcerApp(tk.Tk):
         print("[DEBUG] Break notification messagebox shown")
 
         # Start the countdown - style for calm break mode
-<<<<<<< HEAD
-        countdownpage.config(bg="#065f46")
-        countdownpage.title.config(text="☕ Take a Break", bg="#065f46", fg="#ecfdf5")
-        countdownpage.countdown_label.config(bg="#065f46", fg="#86efac")
-=======
         countdownpage.config(bg="#f5f7fa")
         countdownpage.title.config(text="☕ Take a Break", bg="#f5f7fa", fg="#065f46")
         countdownpage.countdown_label.config(bg="#f5f7fa", fg="#059669", wraplength=400)
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
         print("[DEBUG] CountdownPage title updated to calm break mode")
 
         print("[DEBUG] Countdown label update initiated")
@@ -933,15 +811,9 @@ class SleepEnforcerApp(tk.Tk):
         try:
             countdownpage = self.frames["CountdownPage"]
             countdownpage.config(bg="#1e1b4b")
-<<<<<<< HEAD
-            countdownpage.countdown_label.config(bg="#1e1b4b", fg="#fbbf24")
-            countdownpage.title.config(text="⚠️ FINAL WARNING", bg="#1e1b4b", fg="#fca5a5")
-            self.frames["CountdownPage"].start_countdown()
-=======
             countdownpage.countdown_label.config(bg="#1e1b4b", fg="#fbbf24", wraplength=400)
             countdownpage.title.config(text="⚠️ FINAL WARNING", bg="#1e1b4b", fg="#fca5a5")
             self.frames["CountdownPage"].start_countdown(countdown_type = 'hibernate')
->>>>>>> 699661edc605ecce63d2b66c5c33216a632aceef
         except Exception as e:
             print(f"[ERROR] Failed to start countdown: {e}")
 
