@@ -232,6 +232,8 @@ class CountdownPage(tk.Frame):
         card = tk.Frame(self, bg=self['bg'])
         card.pack(expand=True, fill='both', padx=0, pady=0)
 
+       
+
         self.title = tk.Label(
             card,
             text="⚠️ FINAL WARNING",
@@ -256,7 +258,11 @@ class CountdownPage(tk.Frame):
 
     def start_countdown(self, countdown_type):
         """Starts or resumes the countdown timer."""
-        self.remaining_seconds = self.controller.final_countdown
+        self.enter_countdown_mode()
+        if countdown_type == "hibernate":
+            self.remaining_seconds = self.controller.final_countdown
+        else:
+            pass
         self.update_countdown_label(countdown_type)
 
     def update_countdown_label(self, countdown_type):
@@ -286,16 +292,83 @@ class CountdownPage(tk.Frame):
             self.after(1000, lambda:self.update_countdown_label(countdown_type))
         else:
             if "break" == countdown_type:
-                self.countdown_label.config(text="Break over. You may continue working.", wraplength=400)
-                self.controller.final_timer_active = False
-                self.controller.is_on_break = False
-                self.after(2000, lambda: self.controller.show_frame("StartupPage"))
+                self.exit_countdown_mode()
+                
             elif "hibernate" == countdown_type:
                 self.countdown_label.config(text="Hibernating...", wraplength=400)
                 self.controller.final_timer_active = False
                 self.after(2000, lambda: self.controller.hibernate_system())
             else:
                 print("[ERROR] countdown text does not contain any known keyword to take action")
+    def enter_countdown_mode(self):
+        """Force countdown UI to occupy the whole screen."""
+        self.controller.resizable(False, False)  # Disables maximize button
+        self.controller.deiconify()
+        self.controller.lift()
+        self.controller.focus_force()
+        self.controller.attributes("-topmost", True)
+
+        # Maximized window (taskbar still visible)
+        self.controller.state("zoomed")
+        self.catch_window_focus_loss()
+        
+        
+    def catch_window_focus_loss(self):
+        """Enforce break mode only when another app truly has foreground focus."""
+        if not self.controller.is_on_break:
+            return
+
+        try:
+            import ctypes
+
+            user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
+
+            GA_ROOT = 2
+            focused = user32.GetForegroundWindow()
+            if not focused:
+                if self.controller.is_on_break:
+                    self.after(1000, self.catch_window_focus_loss)
+                return
+
+            # Compare top-level/root windows, not raw child handles
+            our_root = user32.GetAncestor(self.controller.winfo_id(), GA_ROOT)
+            focused_root = user32.GetAncestor(focused, GA_ROOT)
+
+            same_window = (focused_root == our_root)
+
+            # Extra guard: if foreground window belongs to this process, treat as focused
+            same_process = False
+            pid = ctypes.c_ulong(0)
+            user32.GetWindowThreadProcessId(focused, ctypes.byref(pid))
+            if pid.value == kernel32.GetCurrentProcessId():
+                same_process = True
+
+            if not same_window and not same_process:
+                print("[DEBUG] Another app has focus - restoring...")
+                self.controller.lift()
+                self.controller.focus_force()
+                self.controller.attributes("-topmost", True)
+                self.controller.state("zoomed")
+
+        except Exception as e:
+            print(f"[DEBUG] Focus check error: {e}")
+
+        # Runs every 1 second (comment now matches behavior)
+        if self.controller.is_on_break:
+            self.after(1000, self.catch_window_focus_loss)
+
+    def exit_countdown_mode(self):
+        """Restore normal app window."""
+        self.controller.resizable(True, True)  # Disables maximize button
+        self.controller.state("normal")
+        self.controller.geometry("500x300")
+        self.controller.center_window(self.controller, 500, 300)
+        self.controller.attributes("-topmost", False)
+        self.countdown_label.config(text="Break over. You may continue working.", wraplength=400)
+        self.controller.final_timer_active = False
+        self.controller.is_on_break = False
+        self.after(2000, lambda: self.controller.show_frame("StartupPage"))
 
             
 
@@ -391,6 +464,8 @@ class SleepEnforcerApp(tk.Tk):
 
         # Listening for the Unmap event during widget minmizing(when anything is minimize, it lets me know)
         self.bind('<Unmap>', self.restore_window_on_minimize)
+
+   
 
     def _handle_global_return(self, event):
         """
@@ -611,6 +686,23 @@ class SleepEnforcerApp(tk.Tk):
         else:
             self.show_final_countdown()
 
+    '''
+    def enforce_break_lockdown(self):
+        print("I am enforcing the break")
+        """Re-apply break countdown dominance if user escapes fullscreen/maximized."""
+        if not self.is_on_break:
+            return
+
+        # If user left fullscreen OR window is minimized/normal, force it back.
+        is_fullscreen = bool(self.attributes("-fullscreen"))
+        current_state = self.state()  # 'normal', 'iconic', 'zoomed'
+    
+
+        if (not is_fullscreen) or (current_state != "zoomed"):
+            print("Locking")
+            countdown_page = self.frames["CountdownPage"]
+            countdown_page.enter_countdown_mode()
+    '''
     def on_minimizing_to_background(self):
         """Handle the user clicking the 'X' button."""
         # Check if they are trying to escape the break!
@@ -618,6 +710,7 @@ class SleepEnforcerApp(tk.Tk):
             messagebox.showwarning("Locked", "Hey! Stop trying to evade the break.\nCool down and rest.", parent=self)
             self.lift()
             self.focus_force()
+            
             return # Stops them from minimizing by ending this function here
         else:   
             # In the notification centre
@@ -757,25 +850,12 @@ class SleepEnforcerApp(tk.Tk):
         print(f"[DEBUG] Current time: {self.current_time}")
         print(f"[DEBUG] Break status is {self.final_timer_active}")
 
-        self.show_frame("CountdownPage")
-        print("[DEBUG] CountdownPage frame shown")
-
         countdownpage = self.frames["CountdownPage"]
-        print("[DEBUG] CountdownPage method called")
+
 
         self.final_timer_active = True
         self.is_on_break = True
         print(f"[DEBUG] Break status is {self.is_on_break}")
-
-    
-
-        # Show break notification
-        messagebox.showinfo(
-            "5 Minute Break",
-            "Please take a 5 minute break before continuing your work.",
-            parent=self
-        )
-        print("[DEBUG] Break notification messagebox shown")
 
         # Start the countdown - style for calm break mode
         countdownpage.config(bg="#f5f7fa")
@@ -786,10 +866,17 @@ class SleepEnforcerApp(tk.Tk):
         print("[DEBUG] Countdown label update initiated")
         print(f"[DEBUG] take_5mins_break() method completed, timer active: {self.final_timer_active}")
         self.show_frame("CountdownPage")
+        # Show break notification
+        messagebox.showinfo(
+            "5 Minute Break",
+            "Please take a 5 minute break before continuing your work.",
+            parent=self
+        )
+        print("[DEBUG] Break notification messagebox shown")
        
         # We want to use the same final countdown page and timer logic but just with 5 mins instead of 1 min
         countdownpage.remaining_seconds = 300  # 5 minutes
-        countdownpage.update_countdown_label(countdown_type="break")
+        countdownpage.start_countdown(countdown_type="break")
      
     def grant_extension(self):
         self.current_time = datetime.now()
