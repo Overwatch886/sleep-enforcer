@@ -50,3 +50,34 @@ This project can be built into a standalone executable using PyInstaller.
 3. Run the build command: 
    ```bash
    pyinstaller sleep_enforcer.spec
+
+## **How to Create Installers (Windows)**
+
+This repository includes a ready Inno Setup script and a PyInstaller spec to produce a Windows installer.
+
+Prerequisites
+- Install and activate the Conda environment described above: see [README.md](README.md)
+- Install `pyinstaller` in the active environment: `pip install pyinstaller`
+- Install [Inno Setup](https://jrsoftware.org/isinfo.php) (or the portable Inno Setup compiler) to create the final installer.
+
+Build the executable
+1. Activate the environment:
+```powershell
+conda activate sleep_enforcer_windows_env
+```
+2. Build the application using the included spec (this produces a `dist\sleep_enforcer` folder with the exe and required files):
+```powershell
+pyinstaller sleep_enforcer.spec
+```
+
+Create the installer (Inno Setup)
+1. Open the Inno Setup IDE and load [sleep_enforcer_installer.iss](sleep_enforcer_installer.iss) to review output paths and options.
+
+2. The installer output will be placed according to the `.iss` script.
+
+Notes & tips
+- The `sleep_enforcer_installer.iss` script is already configured for this project — edit it to change installer name, version, or icons. See [sleep_enforcer_installer.iss](sleep_enforcer_installer.iss) for details.
+
+
+Testing the installer
+- Run the produced installer on a test Windows machine or VM to verify install/uninstall behavior and that the app launches correctly after install.
