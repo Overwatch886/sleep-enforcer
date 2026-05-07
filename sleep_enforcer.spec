@@ -15,14 +15,15 @@ a = Analysis(
     optimize=0,
 )
 pyz = PYZ(a.pure)
-
+version = "1.3.0"
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
     a.datas,
     [],
-    name='sleep_enforcer',
+    #exclude_binaries=True,
+    name=f'sleep_enforcer-v{version}',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
