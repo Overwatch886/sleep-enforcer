@@ -5,6 +5,7 @@ import threading
 import time
 from datetime import datetime, timedelta
 import os
+import json
 import subprocess
 import sys
 import tempfile
@@ -75,7 +76,9 @@ class StartupPage(tk.Frame):
         # Status card
         card = tk.Frame(self, bg="#ffffff", bd=1, relief='flat', highlightthickness=0)
         card.pack(padx=20, pady=15, fill='x')
-        status_text = f"⏰ Warning at: {self.controller.warning_time_str}\n🛑 Shutdown check at: {self.controller.shutdown_time_str}"
+        status_text = f'''⏰ Warning at: {self.controller.warning_time_str}
+        \n🛑 Shutdown check at: {self.controller.shutdown_time_str}
+        \n🌞 Wake Time at {self.controller.wake_time_str}'''
         self.status_label = tk.Label(card, text=status_text, font=("Arial", 11), bg="#ffffff", fg="#334155")
         self.status_label.pack(padx=16, pady=14)
 
@@ -95,8 +98,10 @@ class StartupPage(tk.Frame):
         print(self.controller.warning_time_str)
         self.controller.shutdown_time_str = self.controller.shutdown_time.strftime("%H:%M")
         self.controller.warning_time_str = self.controller.warning_time.strftime("%H:%M")
-        
-        status_text = f"⏰ Warning at: {self.controller.warning_time_str}\n🛑 Shutdown check at: {self.controller.shutdown_time_str}"
+        self.controller.wake_time_str = self.controller.wake_time.strftime("%H:%M")
+        status_text = f'''⏰ Warning at: {self.controller.warning_time_str}
+        \n🛑 Shutdown check at: {self.controller.shutdown_time_str}
+        \n Wake Time at {self.controller.wake_time_str}'''
         self.status_label.config(text=status_text)
 
 
@@ -135,6 +140,15 @@ class SettingsPage(tk.Frame):
         self.shutdown_combo.pack(pady=(0,10))
         # Bind key release for filtering
         self.shutdown_combo.bind('<KeyRelease>', lambda e: self._filter_options(e, self.shutdown_combo, time_options))
+        #TODO Consider seperateing intefacee code into a sepaarate file
+        # Wake Time
+        self.waketime_label = tk.Label(container, text = "🌞 Wake Time", fg="green", font=("Arial", 11, "bold"))
+        self.waketime_label.pack()
+        self.waketime_combo = ttk.Combobox(container, values = time_options, width = 20)
+        self.waketime_combo.set(controller.wake_time_str)
+        self.waketime_combo.pack()
+         # Bind key release for filtering
+        self.waketime_combo.bind('<KeyRelease>', lambda e: self._filter_options(e, self.waketime_combo, time_options))
 
         # Checkbox
         self.strict_var = tk.BooleanVar(value=controller.strict_break_mode)
@@ -227,6 +241,7 @@ class CountdownPage(tk.Frame):
         tk.Frame.__init__(self, parent, bg="#1e1b4b")
         self.controller = controller
         self.remaining_seconds = 0
+        self._after_id = None  # Track pending callback to allow cancellation
 
         # Centered card area with proper fill
         card = tk.Frame(self, bg=self['bg'])
@@ -267,12 +282,18 @@ class CountdownPage(tk.Frame):
 
     def update_countdown_label(self, countdown_type):
         """The recursive function to update the countdown label."""
+        now = datetime.now()
         # Check the controller's flag to see if we should still be counting
         if not self.controller.final_timer_active:
             self.controller.show_frame("StartupPage")
             return  # Stop the countdown
-            
-        if self.remaining_seconds > 0:
+        
+        elif now > self.controller.wake_time and now > self.controller.shutdown_time:
+            self.controller.show_frame("StartupPage")
+            self.controller.grace_timer_active = False
+            self.controller.final_timer_active = False
+            return  # Stop the countdown
+        elif self.remaining_seconds > 0:
             self.remaining_seconds -= 1
             if "break" == countdown_type:
                 self.countdown_label.config(
@@ -289,7 +310,7 @@ class CountdownPage(tk.Frame):
                 
             print(f"[{datetime.now()}] {self.remaining_seconds} seconds left")
             # Update the countdown every second
-            self.after(1000, lambda:self.update_countdown_label(countdown_type))
+            self._after_id = self.after(1000, lambda: self.update_countdown_label(countdown_type))
         else:
             if "break" == countdown_type:
                 self.exit_countdown_mode()
@@ -370,6 +391,19 @@ class CountdownPage(tk.Frame):
         self.controller.is_on_break = False
         self.after(2000, lambda: self.controller.show_frame("StartupPage"))
 
+    def cancel_countdown(self):
+        """Cancel any pending countdown callbacks and reset state."""
+        if self._after_id:
+            try:
+                self.after_cancel(self._after_id)
+                print("[DEBUG] Countdown callback cancelled.")
+            except Exception as e:
+                print(f"[DEBUG] Error cancelling callback: {e}")
+            self._after_id = None
+        self.remaining_seconds = 0
+        self.controller.final_timer_active = False
+        self.controller.is_on_break = False
+
             
 
     
@@ -400,6 +434,7 @@ class SleepEnforcerApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.on_minimizing_to_background) # Handle user closing window(this minimizes it to background)
         self.current_time = datetime.now()
         self.current_time_str = self.current_time.strftime("%H:%M")
+        self.last_check_time = self.current_time  # Track time for resume detection
 
         self.warning_time = self.convert_to_dt_format("21:55")
         self.warning_time_str = self.warning_time.strftime("%H:%M")
@@ -407,7 +442,8 @@ class SleepEnforcerApp(tk.Tk):
         self.shutdown_time = self.convert_to_dt_format("22:00")
         self.shutdown_time_str = self.shutdown_time.strftime("%H:%M")
 
-        self.wake_time = self.convert_to_dt_format("05:00")
+        self.wake_time = self.convert_to_dt_format("06:00")
+        self.wake_time_str = self.wake_time.strftime("%H:%M")
         
         self.grace_period = 180
         self.final_countdown = 60
@@ -423,6 +459,8 @@ class SleepEnforcerApp(tk.Tk):
         # Settings and Configurations
         self.strict_break_mode = True
         self.is_on_break=False
+        self.settings_file_path = self.get_settings_file_path()
+        self.load_persistent_settings()
         # --- 3. Load Assets ---
         self.load_assets()
         self.setup_tray() # Creating Notification Tray 
@@ -478,6 +516,57 @@ class SleepEnforcerApp(tk.Tk):
         if isinstance(widget, (ttk.Button, ttk.Checkbutton, tk.Button, tk.Checkbutton)):
             widget.invoke()
             return "break" # Prevents the event from doing anything else
+
+    def get_settings_file_path(self):
+        """Return a writable per-user path for persisted app settings."""
+        app_data_dir = os.getenv("LOCALAPPDATA") or os.path.expanduser("~")
+        settings_dir = os.path.join(app_data_dir, "SleepEnforcer")
+        os.makedirs(settings_dir, exist_ok=True)
+        return os.path.join(settings_dir, "settings.json")
+
+    def save_persistent_settings(self):
+        """Persist user-selected settings to JSON so they survive app restarts."""
+        settings_payload = {
+            "warning_time": self.warning_time_str,
+            "shutdown_time": self.shutdown_time_str,
+            "strict_break_mode": self.strict_break_mode,
+            "wake_time": self.wake_time_str
+        }
+        with open(self.settings_file_path, "w", encoding="utf-8") as settings_file:
+            json.dump(settings_payload, settings_file, indent=2)
+
+    def load_persistent_settings(self):
+        """Load persisted settings if present and valid, otherwise keep defaults."""
+        if not os.path.exists(self.settings_file_path):
+            return
+
+        try:
+            with open(self.settings_file_path, "r", encoding="utf-8") as settings_file:
+                settings_payload = json.load(settings_file)
+
+            warning_time_str = settings_payload.get("warning_time")
+            shutdown_time_str = settings_payload.get("shutdown_time")
+            strict_break_mode = settings_payload.get("strict_break_mode")
+            wake_time_str = settings_payload.get("wake_time")
+
+            if warning_time_str:
+                self.warning_time = self.convert_to_dt_format(warning_time_str)
+                self.warning_time_str = self.warning_time.strftime("%H:%M")
+
+            if shutdown_time_str:
+                self.shutdown_time = self.convert_to_dt_format(shutdown_time_str)
+                self.shutdown_time_str = self.shutdown_time.strftime("%H:%M")
+
+            if wake_time_str:
+                self.wake_time = self.convert_to_dt_format(wake_time_str)
+                self.wake_time_str = self.wake_time.strftime("%H:%M")
+
+            if isinstance(strict_break_mode, bool):
+                self.strict_break_mode = strict_break_mode
+
+            print(f"[DEBUG] Loaded settings from {self.settings_file_path}")
+        except (OSError, ValueError, json.JSONDecodeError) as e:
+            print(f"[WARN] Could not load persisted settings: {e}")
         
     def convert_to_dt_format(self, time_to_convert):
         
@@ -528,9 +617,8 @@ class SleepEnforcerApp(tk.Tk):
         frame.focus_set()
         
         # Bringing GUI to foreground
+        self.state('zoomed')
         self.deiconify()
-        if self.state() == 'iconic':
-            self.state('normal')
         
         self.lift()
         self.focus_force()
@@ -606,9 +694,11 @@ class SleepEnforcerApp(tk.Tk):
                 self.strict_break_mode = settings_page.strict_var.get()
                 print(f"[DEBUG] Strict Mode set to: {self.strict_break_mode}")
                 
-                print(f"[DEBUG] New Warning Time: {self.warning_time.strftime("%H:%M")}")
+                print(f"[DEBUG] New Warning Time: {self.warning_time.strftime('%H:%M')}")
 
-                print(f"[DEBUG] New Shutdown Time: {self.shutdown_time.strftime("%H:%M")}")
+                print(f"[DEBUG] New Shutdown Time: {self.shutdown_time.strftime('%H:%M')}")
+
+                self.save_persistent_settings()
                 
                 # 4. (IMPORTANT) Update the StartupPage status label
                 self.frames["StartupPage"].update_status()
@@ -661,7 +751,7 @@ class SleepEnforcerApp(tk.Tk):
 
         # Code to Unminimize the program for proper visibility
         if self.state() == 'iconic':
-            self.state('normal')
+            self.state('zoomed')
 
         # Code to make the sleep enforcer the major focus window the user
         self.lift()
@@ -752,10 +842,19 @@ class SleepEnforcerApp(tk.Tk):
     def check_time(self):
         # Getting Current Time
         self.current_time = datetime.now()
-        # Adding a day to wake time if it seems to be past current time
-        if self.wake_time < self.current_time:
-                self.wake_time+=timedelta(days=1)
+
+        # Detect system resume: if >5 minutes have passed since last check, system likely hibernated/suspended
+        delta_seconds = (self.current_time - self.last_check_time).total_seconds()
+        self.last_check_time = self.current_time
+        
+        if delta_seconds > 300:  # 5-minute threshold
+            print(f"[DEBUG] System resume detected: {delta_seconds}s gap. Handling resume.")
+            self.handle_system_resume()
+        
         if not self.grace_timer_active and not self.final_timer_active: # IF grace timer is not active, then go on with the check. 
+            # Adding a day to wake time if it seems to be past current time
+            if self.wake_time < self.current_time:
+                self.wake_time+=timedelta(days=1)
             if self.current_time.strftime("%H:%M")  == self.warning_time.strftime("%H:%M"):
                 print("[DEBUG] WARNING TIME MATCHED! Showing warning...")
                 self.show_warning()
@@ -772,6 +871,29 @@ class SleepEnforcerApp(tk.Tk):
         else:
             print(f"[DEBUG] Grace/Final timer is still active, check back in 1 minute")
             self.after(60000, self.check_time)
+
+    def handle_system_resume(self):
+        """Called when system resumes from hibernation/suspend. Cancels active countdowns."""
+        print("[DEBUG] Handling system resume: cancelling active timers.")
+        self.grace_timer_active = False
+        self.final_timer_active = False
+        self.is_on_break = False
+
+        # Cancel any pending countdown callbacks
+        try:
+            cp = self.frames.get("CountdownPage")
+            if cp:
+                cp.cancel_countdown()
+                print("[DEBUG] Countdown cancelled after resume.")
+        except Exception as e:
+            print(f"[DEBUG] Error cancelling countdown on resume: {e}")
+
+        # Return to StartupPage
+        try:
+            self.frames["StartupPage"].update_status()
+        except Exception:
+            pass
+        self.show_frame("StartupPage")
 
     def show_warning(self):
         # Bring the Warning Window to user focus
@@ -875,7 +997,7 @@ class SleepEnforcerApp(tk.Tk):
         print("[DEBUG] Break notification messagebox shown")
        
         # We want to use the same final countdown page and timer logic but just with 5 mins instead of 1 min
-        countdownpage.remaining_seconds = 300  # 5 minutes
+        countdownpage.remaining_seconds = 30 #TODO chnge thiss baack to production figure  # 5 minutes
         countdownpage.start_countdown(countdown_type="break")
      
     def grant_extension(self):
@@ -920,7 +1042,7 @@ class SleepEnforcerApp(tk.Tk):
         self.grace_timer_active = False
         self.show_frame('StartupPage')
         # Give windows some time
-        time.sleep(0.3)
+        time.sleep(1)
         
         # Hibernate
         try:
