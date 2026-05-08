@@ -110,64 +110,110 @@ class SettingsPage(tk.Frame):
         tk.Frame.__init__(self, parent, bg="#f5f7fa")
         self.controller = controller
 
-        # Main container - centered
-        container = tk.Frame(self, bg="#f5f7fa")
-        container.pack(expand=True, pady=10)
+        # ===== HEADER FRAME (Fixed) =====
+        header = tk.Frame(self, bg="#f5f7fa")
+        header.pack(fill='x', padx=0, pady=0)
+        
+        title = tk.Label(header, text="⚙️ Settings", font=("Arial", 18, "bold"), bg="#f5f7fa", fg="#1e40af")
+        title.pack(pady=(15, 10))
 
-        # Title
-        title = tk.Label(container, text="⚙️ Settings", font=("Arial", 18, "bold"), bg="#f5f7fa", fg="#1e40af")
-        title.pack(pady=(0,20))
+        # ===== SCROLLABLE CONTENT AREA =====
+        # Create a canvas with scrollbar
+        canvas_frame = tk.Frame(self, bg="#f5f7fa")
+        canvas_frame.pack(fill='both', expand=True, padx=0, pady=0)
 
+        # Canvas for scrollable content
+        self.canvas = tk.Canvas(canvas_frame, bg="#f5f7fa", highlightthickness=0, bd=0)
+        scrollbar = ttk.Scrollbar(canvas_frame, orient='vertical', command=self.canvas.yview)
+        scrollable_frame = tk.Frame(self.canvas, bg="#f5f7fa")
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas.create_window((0, 0), window=scrollable_frame, anchor='nw')
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack canvas and scrollbar
+        self.canvas.pack(side='left', fill='both', expand=True)
+        scrollbar.pack(side='right', fill='y')
+
+        # Enable mouse wheel scrolling
+        self.canvas.bind_all('<MouseWheel>', lambda e: self._on_mousewheel(e))
+
+        # ===== SETTINGS CONTENT =====
         # Create time options
         time_options = [f"{h:02d}:{m:02d}" for h in range(24) for m in range(0, 60, 15)]
         
-        # Warning time
-        warning_label = tk.Label(container, text="⏰ Warning Time", bg="#f5f7fa", fg="#1e293b", font=("Arial", 11, "bold"))
-        warning_label.pack(pady=(0,6))
+        # Section: Sleep Schedule
+        schedule_section = tk.Frame(scrollable_frame, bg="#ffffff", relief='solid', bd=1)
+        schedule_section.pack(fill='x', padx=15, pady=(15, 10))
 
-        self.warning_combo = ttk.Combobox(container, values=time_options, width=20, state='normal')
+        schedule_title = tk.Label(schedule_section, text="Sleep Schedule", font=("Arial", 12, "bold"), bg="#ffffff", fg="#1e40af")
+        schedule_title.pack(anchor='w', padx=12, pady=(12, 8))
+
+        # Warning time
+        warning_container = tk.Frame(schedule_section, bg="#ffffff")
+        warning_container.pack(fill='x', padx=12, pady=8)
+        warning_label = tk.Label(warning_container, text="⏰ Warning Time", bg="#ffffff", fg="#1e293b", font=("Arial", 10, "bold"))
+        warning_label.pack(anchor='w')
+        self.warning_combo = ttk.Combobox(warning_container, values=time_options, width=25, state='normal')
         self.warning_combo.set(controller.warning_time_str)
-        self.warning_combo.pack(pady=(0,10))
-        # Bind key release for filtering
+        self.warning_combo.pack(anchor='w', pady=(4, 0))
         self.warning_combo.bind('<KeyRelease>', lambda e: self._filter_options(e, self.warning_combo, time_options))
 
         # Shutdown time
-        shutdown_label = tk.Label(container, text="🌙 Shutdown Time", bg="#f5f7fa", fg="#dc2626", font=("Arial", 11, "bold"))
-        shutdown_label.pack(pady=(0,6))
-
-        self.shutdown_combo = ttk.Combobox(container, values=time_options, width=20, state='normal')
+        shutdown_container = tk.Frame(schedule_section, bg="#ffffff")
+        shutdown_container.pack(fill='x', padx=12, pady=8)
+        shutdown_label = tk.Label(shutdown_container, text="🌙 Shutdown Time", bg="#ffffff", fg="#dc2626", font=("Arial", 10, "bold"))
+        shutdown_label.pack(anchor='w')
+        self.shutdown_combo = ttk.Combobox(shutdown_container, values=time_options, width=25, state='normal')
         self.shutdown_combo.set(controller.shutdown_time_str)
-        self.shutdown_combo.pack(pady=(0,10))
-        # Bind key release for filtering
+        self.shutdown_combo.pack(anchor='w', pady=(4, 0))
         self.shutdown_combo.bind('<KeyRelease>', lambda e: self._filter_options(e, self.shutdown_combo, time_options))
-        #TODO Consider seperateing intefacee code into a sepaarate file
-        # Wake Time
-        self.waketime_label = tk.Label(container, text = "🌞 Wake Time", fg="green", font=("Arial", 11, "bold"))
-        self.waketime_label.pack()
-        self.waketime_combo = ttk.Combobox(container, values = time_options, width = 20)
+
+        # Wake time
+        wake_container = tk.Frame(schedule_section, bg="#ffffff")
+        wake_container.pack(fill='x', padx=12, pady=(8, 12))
+        self.waketime_label = tk.Label(wake_container, text="🌞 Wake Time", fg="#16a34a", font=("Arial", 10, "bold"), bg="#ffffff")
+        self.waketime_label.pack(anchor='w')
+        self.waketime_combo = ttk.Combobox(wake_container, values=time_options, width=25, state='normal')
         self.waketime_combo.set(controller.wake_time_str)
-        self.waketime_combo.pack()
-         # Bind key release for filtering
+        self.waketime_combo.pack(anchor='w', pady=(4, 0))
         self.waketime_combo.bind('<KeyRelease>', lambda e: self._filter_options(e, self.waketime_combo, time_options))
 
-        # Checkbox
-        self.strict_var = tk.BooleanVar(value=controller.strict_break_mode)
-        strict_check = ttk.Checkbutton(container, text="Enable mandatory 5-minute break", variable=self.strict_var)
-        strict_check.pack(pady=(10,30))
-        
+        # Section: Behavior
+        behavior_section = tk.Frame(scrollable_frame, bg="#ffffff", relief='solid', bd=1)
+        behavior_section.pack(fill='x', padx=15, pady=(0, 15))
 
-        # Buttons
-        footer = tk.Frame(container, bg="#f5f7fa")
-        footer.pack()
+        behavior_title = tk.Label(behavior_section, text="Behavior", font=("Arial", 12, "bold"), bg="#ffffff", fg="#1e40af")
+        behavior_title.pack(anchor='w', padx=12, pady=(12, 8))
+
+        # Strict break mode checkbox
+        self.strict_var = tk.BooleanVar(value=controller.strict_break_mode)
+        strict_container = tk.Frame(behavior_section, bg="#ffffff")
+        strict_container.pack(fill='x', padx=12, pady=(8, 12))
+        strict_check = ttk.Checkbutton(strict_container, text="Enable mandatory 5-minute break", variable=self.strict_var)
+        strict_check.pack(anchor='w')
+
+        # ===== FOOTER FRAME (Fixed) =====
+        footer = tk.Frame(self, bg="#f5f7fa", relief='solid', bd=1)
+        footer.pack(fill='x', padx=0, pady=0, side='bottom')
         
-        save_btn = ttk.Button(footer, text="💾 Save Settings", command=lambda: controller.save_settings())
-        save_btn.pack(side='left', padx=(0,10))
-       
+        footer_content = tk.Frame(footer, bg="#f5f7fa")
+        footer_content.pack(padx=15, pady=12)
         
-        back_btn = ttk.Button(footer, text="← Back to Home", command=lambda: controller.show_frame("StartupPage"))
+        save_btn = ttk.Button(footer_content, text="💾 Save Settings", command=lambda: controller.save_settings())
+        save_btn.pack(side='left', padx=(0, 10))
+        
+        back_btn = ttk.Button(footer_content, text="← Back to Home", command=lambda: controller.show_frame("StartupPage"))
         back_btn.pack(side='left')
-        
-       ## TODO Work on making the focus set automatically to shutdown input
+
+    def _on_mousewheel(self, event):
+        """Handle mouse wheel scrolling on the canvas."""
+        if self.canvas.winfo_containing(event.x_root, event.y_root) == self.canvas:
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
 
     def _filter_options(self, event, combo, all_options):
         """Filter options using 'starts with' logic and maintain cursor position."""
@@ -997,7 +1043,7 @@ class SleepEnforcerApp(tk.Tk):
         print("[DEBUG] Break notification messagebox shown")
        
         # We want to use the same final countdown page and timer logic but just with 5 mins instead of 1 min
-        countdownpage.remaining_seconds = 30 #TODO chnge thiss baack to production figure  # 5 minutes
+        countdownpage.remaining_seconds = 300
         countdownpage.start_countdown(countdown_type="break")
      
     def grant_extension(self):
