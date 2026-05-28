@@ -81,3 +81,8 @@ Notes & tips
 
 Testing the installer
 - Run the produced installer on a test Windows machine or VM to verify install/uninstall behavior and that the app launches correctly after install.
+
+## **Developer Resources**
+
+If you are an AI agent or developer continuing work on this project, please consult the comprehensive [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) for architecture diagrams, conda environment setup, headless testing guidelines, and detailed build/release instructions.
+
