@@ -63,4 +63,16 @@ When authorized to compile or issue a new version:
 
 ---
 
+## 7. Workspace Pathing & Synced Deployments Protocol 🔄
+* **Primary Developer Workspace**: `C:\developer\healthy_sleep_enforcer\windows_app`
+* **Sandbox / Temporary Worktree**: AI agents are frequently initialized inside temporary system-allocated git worktrees (e.g. under `AppData\Local\.gemini\antigravity\worktrees`).
+* **Sync Mandatory**: If the agent is initialized inside a temporary worktree, it MUST copy all modified source files, test files, and assets back to the permanent developer workspace before concluding the task.
+* **Rebuild in Permanent Directory**: All binary packaging (standalone executables and setup installers) must be fully rebuilt inside the permanent developer workspace so that the user's active local files are up-to-date.
+* **Workspace Alert Protocol**: Before prompting the user to perform verification or run tests, the agent must clearly state:
+  1. The path of the sandboxed workspace where development took place.
+  2. The path of the permanent workspace where files have been synced.
+  3. The exact path of the setup installer or executable the user should launch.
+
+---
+
 *Always reference this file and [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) at the beginning of each session to align your workspace state.*

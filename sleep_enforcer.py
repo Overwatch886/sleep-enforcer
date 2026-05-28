@@ -16,19 +16,38 @@ import psutil
 import atexit
 
 class DualLogger:
-    """Redirects stdout/stderr to both the terminal console and a persistent log file."""
-    def __init__(self, filepath):
-        self.terminal = sys.stdout
-        self.log = open(filepath, "a", encoding="utf-8")
+    """Redirects stdout/stderr to both the terminal console (if available) and a persistent log file."""
+    def __init__(self, filepath, terminal_stream):
+        self.terminal = terminal_stream
+        try:
+            self.log = open(filepath, "a", encoding="utf-8")
+        except Exception:
+            self.log = None
         
     def write(self, message):
-        self.terminal.write(message)
-        self.log.write(message)
-        self.log.flush()
+        if self.terminal is not None:
+            try:
+                self.terminal.write(message)
+            except Exception:
+                pass
+        if self.log is not None:
+            try:
+                self.log.write(message)
+                self.log.flush()
+            except Exception:
+                pass
         
     def flush(self):
-        self.terminal.flush()
-        self.log.flush()
+        if self.terminal is not None:
+            try:
+                self.terminal.flush()
+            except Exception:
+                pass
+        if self.log is not None:
+            try:
+                self.log.flush()
+            except Exception:
+                pass
 
 
 # Relative File Resolver to Help Find Other Non-python resources
@@ -1072,8 +1091,8 @@ if __name__ == "__main__":
     log_file = os.path.join(log_dir, "sleep_enforcer.log")
     
     # Enable dual logging to console and persistent file
-    sys.stdout = DualLogger(log_file)
-    sys.stderr = DualLogger(log_file)
+    sys.stdout = DualLogger(log_file, sys.stdout)
+    sys.stderr = DualLogger(log_file, sys.stderr)
     
     print(f"\n--- Sleep Enforcer Started at {datetime.now()} ---")
     
