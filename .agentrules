@@ -1,0 +1,66 @@
+# Sleep Enforcer Agent Rules & Operational Guidelines
+
+This file defines the strict operational rules and guidelines that any AI coding agent (including yourself) must read, internalize, and adhere to when working on this repository.
+
+---
+
+## 1. Branching & Push Constraints 🛡️
+* **Primary Rule**: All agent modifications, feature branches, and test runs **must** occur exclusively on the **`agent-dev`** branch (or a designated feature branch).
+* **Direct Push Restriction**: **DO NOT push directly to the `main` branch under any circumstances.** Merges into `main` are reserved exclusively for the human user or will be triggered by explicit instructions.
+
+---
+
+## 2. Git Authorship Separation 👤
+To maintain a clear and easily auditable Git history, all agent commits must be configured locally under the custom agent identity:
+* **Name**: `SleepEnforcer Agent`
+* **Email**: `agent@healthy-sleep-enforcer.local`
+
+*Command for verification or re-application:*
+```bash
+git config --local user.name "SleepEnforcer Agent"
+git config --local user.email "agent@healthy-sleep-enforcer.local"
+```
+
+---
+
+## 3. Environment & Runtime Context 🐍
+* **Conda Environment Mandatory**: The Sleep Enforcer requires specific dependencies (e.g., `pystray`, `psutil`, `pillow`, `pyinstaller`). You **must** run all commands, testing suites, and build scripts inside the designated Conda environment.
+* **Conda Environment Name**: `sleep_enforcer_windows_env`
+* **Executing Commands**:
+  Use `conda run -n sleep_enforcer_windows_env` directly to avoid shell shell-activation quirks:
+  ```powershell
+  conda run -n sleep_enforcer_windows_env python sleep_enforcer.py
+  ```
+
+---
+
+## 4. UI & Threading Architecture Rules 💻
+* **No Blocking GUI Modals**: Standard blocking dialogue boxes (e.g. `tkinter.messagebox.showinfo`) freeze the main thread and can disrupt background schedulers or sleep check timers.
+* **Standard practice**: Always utilize the app's custom, non-blocking warning modal window class:
+  ```python
+  self.show_custom_warning("Title", "Message details...")
+  ```
+* **Dual Logging**: Real-time app logging output goes concurrently to stdout/stderr and `%LOCALAPPDATA%\SleepEnforcer\sleep_enforcer.log`. Ensure the `DualLogger` class and logger instantiation remain intact.
+
+---
+
+## 5. Verification & Testing Protocol 🧪
+* **Headless Unit Tests**: Prior to compiling or committing core scheduling or state transition updates, always execute the headless testing suite to verify schedule logic:
+  ```powershell
+  conda run -n sleep_enforcer_windows_env python test_sleep_enforcer.py
+  ```
+  Ensure all 4 test suites (Normal Daytime, Active Bedtime, Morning Resume, Late Night Config) pass with a `[SUCCESS]` state.
+
+---
+
+## 6. Build & Release Protocol 📦
+When authorized to compile or issue a new version:
+1. **Bump version** sequentially (e.g. `1.3.2` -> `1.3.3`) in `sleep_enforcer.spec` and `sleep_enforcer_installer.iss`.
+2. **Build Standalone**: Compile executable via `pyinstaller sleep_enforcer.spec`.
+3. **Compile Installer**: Compile Setup Installer using Inno Setup via `& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" sleep_enforcer_installer.iss`.
+4. **Push & Tag**: Push changes to `agent-dev`, tag the version locally, and push the tag (`git push origin vX.Y.Z`).
+5. **Run Release script**: Run `create_release.py` to create the GitHub release and upload assets.
+
+---
+
+*Always reference this file and [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) at the beginning of each session to align your workspace state.*
