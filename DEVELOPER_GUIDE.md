@@ -113,7 +113,7 @@ To publish the release and upload the portable binary and setup installer:
 ## **5. Traceability and Sandbox Commit Authorship**
 
 To ensure changes made by AI agents are easily auditable, the local repository has been configured to use the following Git developer credentials for all operations on the `agent-dev` branch:
-* **Username**: `SleepEnforcer Agent`
+* **Username**: `Antigravity Agent`
 * **Email**: `agent@healthy-sleep-enforcer.local`
 
 This ensures that agent work is never mixed up with the user's manual commits, leaving a clean trail of agent contribution.
