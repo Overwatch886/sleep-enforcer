@@ -12,12 +12,12 @@ This file defines the strict operational rules and guidelines that any AI coding
 
 ## 2. Git Authorship Separation 👤
 To maintain a clear and easily auditable Git history, all agent commits must be configured locally under the custom agent identity:
-* **Name**: `SleepEnforcer Agent`
+* **Name**: `Antigravity Agent`
 * **Email**: `agent@healthy-sleep-enforcer.local`
 
 *Command for verification or re-application:*
 ```bash
-git config --local user.name "SleepEnforcer Agent"
+git config --local user.name "Antigravity Agent"
 git config --local user.email "agent@healthy-sleep-enforcer.local"
 ```
 
