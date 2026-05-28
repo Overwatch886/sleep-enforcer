@@ -15,7 +15,7 @@ a = Analysis(
     optimize=0,
 )
 pyz = PYZ(a.pure)
-version = "1.3.1"
+version = "1.3.2"
 exe = EXE(
     pyz,
     a.scripts,
